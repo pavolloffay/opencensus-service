@@ -13,13 +13,18 @@ import (
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
 	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
+)
+
+const (
+	redactedText = "***"
 )
 
 // PiiFilter identifies configuration for PII filtering
 type PiiElement struct {
 	Regex    string `mapstructure:"regex"`
-	Catagory string `mapstructure:"catagory"`
+	Category string `mapstructure:"category"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -32,7 +37,7 @@ type PiiComplexData struct {
 }
 
 type PiiFilter struct {
-	// HashValue true will has the filtered value
+	// HashValue when true will sha3 the filtered value
 	HashValue bool `mapstructure:"hash-value"`
 	// Prefixes attribute name prefix to match the keyword against
 	Prefixes []string `mapstructure:"prefixes"`
@@ -51,6 +56,7 @@ type PiiFilter struct {
 
 type piifilterprocessor struct {
 	nextConsumer consumer.TraceConsumer
+	logger       *zap.Logger
 	hasFilters   bool
 	hashValue    bool
 	prefixes     []string
@@ -61,7 +67,7 @@ type piifilterprocessor struct {
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
 
-func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter) (processor.TraceProcessor, error) {
+func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, logger *zap.Logger) (processor.TraceProcessor, error) {
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
 	}
@@ -94,6 +100,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter) (
 
 	return &piifilterprocessor{
 		nextConsumer: nextConsumer,
+		logger:       logger,
 		hasFilters:   hasFilters,
 		hashValue:    filter.HashValue,
 		prefixes:     prefixes,
@@ -111,7 +118,7 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error compiling key regex %s already specified", elem.Regex)
 		}
-		regexps[regexp] = elem.Catagory
+		regexps[regexp] = elem.Category
 	}
 
 	return regexps, nil
@@ -128,13 +135,13 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 		}
 
 		for key, value := range span.Attributes.AttributeMap {
-			if match, catagory := pfp.matchesKeyRegex(key); match {
-				pfp.filterValue(catagory, value)
+			if match, category := pfp.matchesKeyRegex(key); match {
+				pfp.filterValue(category, value)
 				continue
 			}
 
-			if match, catagory := pfp.matchesValueRegex(value); match {
-				pfp.filterValue(catagory, value)
+			if match, category := pfp.matchesValueRegex(value); match {
+				pfp.filterValue(category, value)
 				continue
 			}
 		}
@@ -151,9 +158,9 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 func (pfp *piifilterprocessor) matchesKeyRegex(key string) (bool, string) {
 	truncatedKey := pfp.getTruncatedKey(key)
 
-	for regexp, catagory := range pfp.keyRegexs {
+	for regexp, category := range pfp.keyRegexs {
 		if regexp.MatchString(truncatedKey) {
-			return true, catagory
+			return true, category
 		}
 	}
 
@@ -163,9 +170,9 @@ func (pfp *piifilterprocessor) matchesKeyRegex(key string) (bool, string) {
 func (pfp *piifilterprocessor) matchesValueRegex(value *tracepb.AttributeValue) (bool, string) {
 	valueString := value.GetStringValue().Value
 
-	for regexp, catagory := range pfp.valueRegexs {
+	for regexp, category := range pfp.valueRegexs {
 		if regexp.MatchString(valueString) {
-			return true, catagory
+			return true, category
 		}
 	}
 
@@ -186,6 +193,7 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 
 			// couldn't work out data type, so ignore
 			if len(dataType) == 0 {
+				pfp.logger.Debug("Unknown data type", zap.String("attribute", elem.TypeKey))
 				continue
 			}
 
@@ -194,6 +202,7 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 				pfp.filterJson(attrib)
 				break
 			default: // ignore all other types
+				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
 				break
 			}
 		}
@@ -206,7 +215,11 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 	// strip any leading/trailing quates which may have been added to the value
 	jsonString = strings.TrimPrefix(jsonString, "\"")
 	jsonString = strings.TrimSuffix(jsonString, "\"")
-	jsoniter.UnmarshalFromString(jsonString, &f)
+	err := jsoniter.UnmarshalFromString(jsonString, &f)
+	if err != nil {
+		pfp.logger.Debug("Error parsing json", zap.Error(err), zap.String("json", jsonString))
+		return
+	}
 
 	filteredCatagories := list.New()
 	var traverseJson func(map[string]interface{})
@@ -214,9 +227,9 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 		for k, v := range x {
 			switch vv := v.(type) {
 			case string:
-				if match, catagory := pfp.matchesKeyRegex(k); match {
+				if match, category := pfp.matchesKeyRegex(k); match {
 					x[k] = pfp.filterStringValue(vv)
-					filteredCatagories.PushBack(catagory)
+					filteredCatagories.PushBack(category)
 				}
 			case map[string]interface{}:
 				traverseJson(vv)
@@ -229,17 +242,17 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 	}
 	traverseJson(f.(map[string]interface{}))
 
-	//TODO: add attribute to annotate filtered state, along with catagory
+	//TODO: add attribute to annotate filtered state, along with category
 	if filteredCatagories.Len() > 0 {
 		filteredJson, _ := jsoniter.MarshalToString(f)
 		value.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: filteredJson}}
 	}
 }
 
-func (pfp *piifilterprocessor) filterValue(catagory string, value *tracepb.AttributeValue) {
+func (pfp *piifilterprocessor) filterValue(category string, value *tracepb.AttributeValue) {
 	filteredValue := pfp.filterStringValue(value.GetStringValue().Value)
 
-	//TODO: add attribute to annotate filtered state, along with catagory
+	//TODO: add attribute to annotate filtered state, along with category
 	value.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: filteredValue}}
 }
 
@@ -250,7 +263,7 @@ func (pfp *piifilterprocessor) filterStringValue(value string) string {
 		sha3.ShakeSum256(h, []byte(value))
 		filtered = fmt.Sprintf("%x", h)
 	} else {
-		filtered = "***"
+		filtered = redactedText
 	}
 
 	return filtered

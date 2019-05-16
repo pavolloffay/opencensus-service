@@ -322,18 +322,28 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			zap.Any("pii-filter", multiProcessorCfg.Global.Attributes.PiiFilter),
 		)
 
+		var err error
 		if len(multiProcessorCfg.Global.Attributes.Values) > 0 {
-			tp, _ = addattributesprocessor.NewTraceProcessor(
+			tp, err = addattributesprocessor.NewTraceProcessor(
 				tp,
 				addattributesprocessor.WithAttributes(multiProcessorCfg.Global.Attributes.Values),
 				addattributesprocessor.WithOverwrite(multiProcessorCfg.Global.Attributes.Overwrite),
 			)
+			if err != nil {
+				logger.Warn("Failed to build the add attribute processor: ", zap.Error(err))
+			}
 		}
 		if len(multiProcessorCfg.Global.Attributes.KeyReplacements) > 0 {
-			tp, _ = attributekeyprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.KeyReplacements...)
+			tp, err = attributekeyprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.KeyReplacements...)
+			if err != nil {
+				logger.Warn("Failed to build the attribute key processor: ", zap.Error(err))
+			}
 		}
 		if multiProcessorCfg.Global.Attributes.PiiFilter != nil {
-			tp, _ = piifilterprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.PiiFilter)
+			tp, err = piifilterprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.PiiFilter, logger)
+			if err != nil {
+				logger.Warn("Failed to build the PII attribute filter processor: ", zap.Error(err))
+			}
 		}
 	}
 	return tp, closeFns

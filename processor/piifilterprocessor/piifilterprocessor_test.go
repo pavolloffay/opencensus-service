@@ -10,6 +10,8 @@ import (
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -57,7 +59,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
-						Catagory: "sensitive",
+						Category: "sensitive",
 					},
 				},
 			},
@@ -99,7 +101,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				ValueRegExs: []PiiElement{
 					{
 						Regex:    "(?:\\d[ -]*?){13,16}",
-						Catagory: "pci",
+						Category: "pci",
 					},
 				},
 			},
@@ -144,7 +146,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
-						Catagory: "sensitive",
+						Category: "sensitive",
 					},
 				},
 			},
@@ -199,7 +201,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
-						Catagory: "sensitive",
+						Category: "sensitive",
 					},
 				},
 			},
@@ -241,7 +243,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
-						Catagory: "sensitive",
+						Category: "sensitive",
 					},
 				},
 				ComplexData: []PiiComplexData{
@@ -268,10 +270,11 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		},
 	}
 
+	logger := zap.New(zapcore.NewNopCore())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sinkExporter := &exportertest.SinkTraceExporter{}
-			akp, err := NewTraceProcessor(sinkExporter, &tt.args)
+			akp, err := NewTraceProcessor(sinkExporter, &tt.args, logger)
 			if err != nil {
 				t.Errorf("NewTraceProcessor() error = %v, want nil", err)
 				return

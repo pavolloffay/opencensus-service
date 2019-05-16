@@ -321,12 +321,12 @@ global:
           type: json
       key-regexs:
         - regex: ^access_token$
-          catagory: sensitive
+          category: sensitive
         - regex: ^secret$
-          catagory: sensitive
+          category: sensitive
       value-regexs:
         - regex: (?:\d[ -]*?){13,16}
-          catagory: pci
+          category: pci
 
 ```
 
