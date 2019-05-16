@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 )
 
 // SenderType indicates the type of sender
@@ -131,6 +132,7 @@ type AttributesCfg struct {
 	Overwrite       bool                                   `mapstructure:"overwrite"`
 	Values          map[string]interface{}                 `mapstructure:"values"`
 	KeyReplacements []attributekeyprocessor.KeyReplacement `mapstructure:"key-mapping,omitempty"`
+	PiiFilter       *piifilterprocessor.PiiFilter          `mapstructure:"pii-filter,omitempty"`
 }
 
 // GlobalProcessorCfg holds global configuration values that apply to all processors

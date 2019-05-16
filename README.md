@@ -281,6 +281,7 @@ The collector also takes some global configurations that modify its behavior for
 
 1. Add Attributes to all spans passing through this collector. These additional attributes can be configured to either overwrite existing keys if they already exist on the span, or respect the original values.
 2. The key of each attribute can also be mapped to different strings using the `key-mapping` configuration. The key matching is case sensitive.
+3. Scan all spans attribute value and keys for PII data to be filtered.
 
 An example using these configurations of this is provided below.
 
@@ -302,6 +303,31 @@ global:
         replacement: http.message
         overwrite: true # replace attribute key even if the replacement string is already a key on the span attributes
         keep: true # keep the attribute with the original key
+    pii-filter:
+      hash-value: true # sha3 the redacted value if true, other wise replace with '***'
+      prefixes:
+        # prefix on which all key-regexes will match.  
+        # In this example http.request.header.access_token, http.request.header.secret,
+        # http.response.header.access_token and http.response.header.secret will all
+        # be filtered
+        - http.request.header.
+        - http.response.header.
+      complex-data:
+        # complex data types such as JSON to filter.  Key is attribute name of data, and type-key points
+        # to attribute defining the data type.  type can be specified instead to explicitely declare type
+        - key: http.request.body
+          type-key: http.request.header.content-type
+        - key: custom.data
+          type: json
+      key-regexs:
+        - regex: ^access_token$
+          category: sensitive
+        - regex: ^secret$
+          category: sensitive
+      value-regexs:
+        - regex: (?:\d[ -]*?){13,16}
+          category: pci
+
 ```
 
 ### <a name="tail-sampling"></a>Intelligent Sampling
