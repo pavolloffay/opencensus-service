@@ -35,6 +35,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/processor/addattributesprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 )
 
 func createExporters(v *viper.Viper, logger *zap.Logger) ([]func(), []consumer.TraceConsumer, []consumer.MetricsConsumer) {
@@ -318,6 +319,7 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			zap.Bool("overwrite", multiProcessorCfg.Global.Attributes.Overwrite),
 			zap.Any("values", multiProcessorCfg.Global.Attributes.Values),
 			zap.Any("key-mapping", multiProcessorCfg.Global.Attributes.KeyReplacements),
+			zap.Any("pii-filter", multiProcessorCfg.Global.Attributes.PiiFilter),
 		)
 
 		if len(multiProcessorCfg.Global.Attributes.Values) > 0 {
@@ -329,6 +331,9 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 		}
 		if len(multiProcessorCfg.Global.Attributes.KeyReplacements) > 0 {
 			tp, _ = attributekeyprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.KeyReplacements...)
+		}
+		if multiProcessorCfg.Global.Attributes.PiiFilter != nil {
+			tp, _ = piifilterprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.PiiFilter)
 		}
 	}
 	return tp, closeFns

@@ -27,7 +27,9 @@ require (
 	github.com/honeycombio/opencensus-exporter v0.0.0-20181101214123-9be2bb327b5a
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jaegertracing/jaeger v1.9.0
+	github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3
 	github.com/omnition/scribe-go v0.0.0-20190131012523-9e3c68f31124
+	github.com/onsi/gomega v1.4.3
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/openzipkin/zipkin-go v0.1.6
 	github.com/orijtech/prometheus-go-metrics-exporter v0.0.3-0.20190313163149-b321c5297f60
@@ -56,6 +58,7 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	google.golang.org/api v0.4.0
 	google.golang.org/grpc v1.20.1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1 // indirect
