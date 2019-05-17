@@ -1,7 +1,6 @@
 package piifilterprocessor
 
 import (
-	"container/list"
 	"context"
 	"errors"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
-	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
 )
@@ -210,53 +208,27 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 }
 
 func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
-	var f interface{}
 	jsonString := value.GetStringValue().Value
 	// strip any leading/trailing quates which may have been added to the value
 	jsonString = strings.TrimPrefix(jsonString, "\"")
 	jsonString = strings.TrimSuffix(jsonString, "\"")
-	err := jsoniter.UnmarshalFromString(jsonString, &f)
-	if err != nil {
-		pfp.logger.Debug("Error parsing json", zap.Error(err), zap.String("json", jsonString))
-		return
-	}
 
-	filteredCatagories := list.New()
-	var traverseJson func(map[string]interface{})
-	traverseJson = func(x map[string]interface{}) {
-		for k, v := range x {
-			switch vv := v.(type) {
-			case string:
-				if match, category := pfp.matchesKeyRegex(k); match {
-					x[k] = pfp.filterStringValue(vv)
-					filteredCatagories.PushBack(category)
-				}
-			case map[string]interface{}:
-				traverseJson(vv)
-			case []interface{}:
-				for _, u := range vv {
-					traverseJson(u.(map[string]interface{}))
-				}
-			}
-		}
-	}
-	traverseJson(f.(map[string]interface{}))
+	filter := NewJsonFilter(pfp, pfp.logger)
 
-	//TODO: add attribute to annotate filtered state, along with category
-	if filteredCatagories.Len() > 0 {
-		filteredJson, _ := jsoniter.MarshalToString(f)
+	if filter.Filter(jsonString) {
+		filteredJson := filter.FilteredText()
+		// TODO: add attribute to annotate filtered state, along with category
 		value.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: filteredJson}}
 	}
 }
 
 func (pfp *piifilterprocessor) filterValue(category string, value *tracepb.AttributeValue) {
-	filteredValue := pfp.filterStringValue(value.GetStringValue().Value)
-
+	filteredValue := pfp.FilterStringValue(value.GetStringValue().Value)
 	//TODO: add attribute to annotate filtered state, along with category
 	value.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: filteredValue}}
 }
 
-func (pfp *piifilterprocessor) filterStringValue(value string) string {
+func (pfp *piifilterprocessor) FilterStringValue(value string) string {
 	var filtered string
 	if pfp.hashValue {
 		h := make([]byte, 64)
