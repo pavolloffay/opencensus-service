@@ -31,21 +31,47 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
   "c":[
     {"c_1":"ccc"},
     {"password":"array_pw"}
-  ]
-}`)
+  ]}`)
 
 	jsonExpected := []byte(`{
-	  "a":"aaa",
-	  "password":"***",
-	  "b":{
-	    "b_1":"bbb",
-	    "password":"***"
-	  },
-	  "c":[
-	    {"c_1":"ccc"},
-	    {"password":"***"}
-	  ]
-	}`)
+  "a":"aaa",
+  "password":"***",
+  "b":{
+    "b_1":"bbb",
+    "password":"***"
+  },
+  "c":[
+    {"c_1":"ccc"},
+    {"password":"***"}
+  ]}`)
+
+	valueJsonInput := []byte(`{  
+  "key_or_value":{  
+    "a":"aaa",
+    "b":"key_or_value"
+    }
+  }`)
+
+	valueJsonExpected := []byte(`{
+  "key_or_value":{  
+    "a":"aaa",
+    "b":"***"
+    }
+  }`)
+
+	invalidJsonInput := []byte(`{
+  "key_or_value":{
+    a:"aaa",
+    "b":"key_or_value"
+    },
+  }`)
+
+	invalidJsonExpected := []byte(`{
+  "***":{
+    a:"aaa",
+    "b":"***"
+    },
+  }`)
 
 	tests := []struct {
 		name string
@@ -128,6 +154,52 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "regex_chain",
+			args: PiiFilter{
+				ValueRegExs: []PiiElement{
+					{
+						Regex:    "aaa",
+						Category: "pci",
+					},
+					{
+						Regex:    "bbb",
+						Category: "pci",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"cc": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "aaa bbb ccc aaa bbb ccc"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"cc": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "*** *** ccc *** *** ccc"}},
 									},
 								},
 							},
@@ -268,6 +340,83 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "value_json_filter",
+			args: PiiFilter{
+				ValueRegExs: []PiiElement{
+					{
+						Regex: "key_or_value",
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "custom.data",
+						Type: "json",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"custom.data": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonInput)}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "invalid_json_filter",
+			args: PiiFilter{
+				ValueRegExs: []PiiElement{
+					{
+						Regex: "key_or_value",
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "custom.data",
+						Type: "json",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"custom.data": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonInput)}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"custom.data": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonExpected)}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	logger := zap.New(zapcore.NewNopCore())
@@ -290,6 +439,10 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				gomega.RegisterTestingT(t)
 				redacted := tt.td.Spans[0].Attributes.AttributeMap["custom.data"].GetStringValue().Value
 				gomega.Expect(jsonExpected).Should(gomega.MatchJSON(redacted))
+			} else if tt.name == "value_json_filter" {
+				gomega.RegisterTestingT(t)
+				redacted := tt.td.Spans[0].Attributes.AttributeMap["custom.data"].GetStringValue().Value
+				gomega.Expect(valueJsonExpected).Should(gomega.MatchJSON(redacted))
 			} else {
 				if diff := cmp.Diff(sinkExporter.AllTraces(), tt.want); diff != "" {
 					t.Errorf("Mismatched TraceData\n-Got +Want:\n\t%s", diff)
