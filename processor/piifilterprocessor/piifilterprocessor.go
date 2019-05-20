@@ -222,6 +222,9 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 			case "json":
 				pfp.filterJson(attrib)
 				break
+			case "sql":
+				pfp.filterSql(attrib)
+				break
 			default: // ignore all other types
 				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
 				break
@@ -246,6 +249,23 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 	}
 
 	if jsonChanged {
+		pfp.replaceValue(filter.FilteredCatagofies(), value, filter.FilteredText())
+	}
+}
+
+func (pfp *piifilterprocessor) filterSql(value *tracepb.AttributeValue) {
+	sqlString := value.GetStringValue().Value
+
+	filter := NewSqlFilter(pfp, pfp.logger)
+	parseFail, sqlChanged := filter.Filter(sqlString)
+
+	// if sql is invalid, run the value filter on the sql string to try and
+	// filter out any keywords out of the string
+	if parseFail {
+		pfp.filterValueRegexs(value)
+	}
+
+	if sqlChanged {
 		pfp.replaceValue(filter.FilteredCatagofies(), value, filter.FilteredText())
 	}
 }
@@ -292,6 +312,8 @@ func getDataType(dataType string) string {
 	switch lcDataType {
 	case "json", "text/json", "application/json": //TODO: should we just search for json substr?
 		lcDataType = "json"
+	case "sql":
+		lcDataType = "sql"
 	default:
 	}
 
