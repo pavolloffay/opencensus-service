@@ -23,34 +23,16 @@ func NewJsonFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	}
 }
 
-func (f *jsonFilter) Filter(input string) bool {
+func (f *jsonFilter) Filter(input string) (bool, bool) {
 	err := jsoniter.UnmarshalFromString(input, &f.json)
 	if err != nil {
 		f.logger.Debug("Problem parsing json", zap.Error(err), zap.String("json", input))
-		return false
+		return true, false
 	}
 
 	f.filterJson(f.json.(map[string]interface{}))
 
-	return f.categories.Len() > 0
-}
-
-func (f *jsonFilter) filterJson(t map[string]interface{}) {
-	for k, v := range t {
-		switch vv := v.(type) {
-		case string:
-			if match, category := f.pfp.matchesKeyRegex(k); match {
-				t[k] = f.pfp.FilterStringValue(vv)
-				f.categories.PushBack(category)
-			}
-		case map[string]interface{}:
-			f.filterJson(vv)
-		case []interface{}:
-			for _, u := range vv {
-				f.filterJson(u.(map[string]interface{}))
-			}
-		}
-	}
+	return false, f.categories.Len() > 0
 }
 
 func (f *jsonFilter) FilteredText() string {
@@ -67,4 +49,33 @@ func (f *jsonFilter) FilteredText() string {
 
 func (f *jsonFilter) FilteredCatagofies() *list.List {
 	return f.categories
+}
+
+func (f *jsonFilter) filterJson(t map[string]interface{}) {
+	for k, v := range t {
+		switch vv := v.(type) {
+		case string:
+			var matchedKey bool
+			for regexp, category := range f.pfp.keyRegexs {
+				if regexp.MatchString(k) {
+					t[k] = f.pfp.redactString(vv)
+					f.categories.PushBack(category)
+					matchedKey = true
+				}
+			}
+			if !matchedKey {
+				vvFiltered, filteredCategories := f.pfp.filterStringValueRegexs(vv)
+				if filteredCategories.Len() > 0 {
+					t[k] = vvFiltered
+					f.categories.PushFrontList(filteredCategories)
+				}
+			}
+		case map[string]interface{}:
+			f.filterJson(vv)
+		case []interface{}:
+			for _, u := range vv {
+				f.filterJson(u.(map[string]interface{}))
+			}
+		}
+	}
 }
