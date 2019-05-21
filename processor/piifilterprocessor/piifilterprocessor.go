@@ -245,6 +245,7 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
+		pfp.logger.Debug("Problem parsing json. Falling back to value regex filtering")
 		pfp.filterValueRegexs(value)
 	}
 
@@ -262,6 +263,7 @@ func (pfp *piifilterprocessor) filterSql(value *tracepb.AttributeValue) {
 	// if sql is invalid, run the value filter on the sql string to try and
 	// filter out any keywords out of the string
 	if parseFail {
+		pfp.logger.Debug("Problem parsing sql. Falling back to value regex filtering")
 		pfp.filterValueRegexs(value)
 	}
 
