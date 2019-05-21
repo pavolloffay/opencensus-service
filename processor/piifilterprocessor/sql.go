@@ -55,7 +55,7 @@ func (f *sqlFilter) Filter(input string) (bool, bool) {
   f.filteredText = str.String()
 
   if redactedLiteral {
-    f.categories.PushBack("sql")
+    f.categories.PushBack("")
   }
 
   return false, f.categories.Len() > 0
