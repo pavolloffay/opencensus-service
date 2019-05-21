@@ -143,25 +143,25 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 				// value filters on complex data are run as part of
 				// complex data filtering
 				continue
-			} else if pfp.filterKeyRegexs(key, value) {
+			} else if pfp.filterKeyRegexs(span, key, value) {
 				// the key regex filters the entire value, so no
 				// need to run the value filter
 				continue
 			}
 
-			pfp.filterValueRegexs(value)
+			pfp.filterValueRegexs(span, key, value)
 		}
 
 		// complex data filtering is always matched on entire key, not
 		// prefixes, so can look up attribute directly, rather than iterating
 		// over all keys looking for a match
-		pfp.filterComplexData(span.Attributes.AttributeMap)
+		pfp.filterComplexData(span)
 	}
 
 	return pfp.nextConsumer.ConsumeTraceData(ctx, td)
 }
 
-func (pfp *piifilterprocessor) filterKeyRegexs(key string, value *tracepb.AttributeValue) bool {
+func (pfp *piifilterprocessor) filterKeyRegexs(span *tracepb.Span, key string, value *tracepb.AttributeValue) bool {
 	truncatedKey := pfp.getTruncatedKey(key)
 
 	for regexp, category := range pfp.keyRegexs {
@@ -169,7 +169,7 @@ func (pfp *piifilterprocessor) filterKeyRegexs(key string, value *tracepb.Attrib
 			redacted := pfp.redactString(value.GetStringValue().Value)
 			filteredCategories := list.New()
 			filteredCategories.PushBack(category)
-			pfp.replaceValue(filteredCategories, value, redacted)
+			pfp.replaceValue(span, filteredCategories, key, value, redacted)
 			return true
 		}
 	}
@@ -177,13 +177,13 @@ func (pfp *piifilterprocessor) filterKeyRegexs(key string, value *tracepb.Attrib
 	return false
 }
 
-func (pfp *piifilterprocessor) filterValueRegexs(value *tracepb.AttributeValue) {
+func (pfp *piifilterprocessor) filterValueRegexs(span *tracepb.Span, key string, value *tracepb.AttributeValue) {
 	valueString := value.GetStringValue().Value
 
 	valueString, filteredCategories := pfp.filterStringValueRegexs(valueString)
 
 	if filteredCategories.Len() > 0 {
-		pfp.replaceValue(filteredCategories, value, valueString)
+		pfp.replaceValue(span, filteredCategories, key, value, valueString)
 	}
 }
 
@@ -200,7 +200,8 @@ func (pfp *piifilterprocessor) filterStringValueRegexs(value string) (string, *l
 	return value, filteredCategories
 }
 
-func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.AttributeValue) {
+func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span) {
+	attribMap := span.GetAttributes().AttributeMap
 	for _, elem := range pfp.complexData {
 		if attrib, ok := attribMap[elem.Key]; ok {
 			var dataType string
@@ -220,7 +221,7 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 
 			switch dataType {
 			case "json":
-				pfp.filterJson(attrib)
+				pfp.filterJson(span, elem.Key, attrib)
 				break
 			default: // ignore all other types
 				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
@@ -230,7 +231,7 @@ func (pfp *piifilterprocessor) filterComplexData(attribMap map[string]*tracepb.A
 	}
 }
 
-func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
+func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value *tracepb.AttributeValue) {
 	jsonString := value.GetStringValue().Value
 	// strip any leading/trailing quates which may have been added to the value
 	jsonString = strings.TrimPrefix(jsonString, "\"")
@@ -242,11 +243,11 @@ func (pfp *piifilterprocessor) filterJson(value *tracepb.AttributeValue) {
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.filterValueRegexs(value)
+		pfp.filterValueRegexs(span, key, value)
 	}
 
 	if jsonChanged {
-		pfp.replaceValue(filter.FilteredCatagofies(), value, filter.FilteredText())
+		pfp.replaceValue(span, filter.FilteredCatagofies(), key, value, filter.FilteredText())
 	}
 }
 
@@ -271,9 +272,20 @@ func (pfp *piifilterprocessor) redactString(value string) string {
 	}
 }
 
-func (pfp *piifilterprocessor) replaceValue(categories *list.List, value *tracepb.AttributeValue, newValue string) {
-	//TODO: add attribute to annotate filtered state, along with category
+func (pfp *piifilterprocessor) replaceValue(span *tracepb.Span, categories *list.List, key string, value *tracepb.AttributeValue, newValue string) {
 	value.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: newValue}}
+
+	var concatedCategories strings.Builder
+	for elem := categories.Front(); elem != nil; elem = elem.Next() {
+		if concatedCategories.Len() > 0 {
+			concatedCategories.WriteString(",")
+		}
+		concatedCategories.WriteString(elem.Value.(string))
+	}
+
+	pbAttrib := &tracepb.AttributeValue{}
+	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: concatedCategories.String()}}
+	span.GetAttributes().AttributeMap[key+".redacted"] = pbAttrib
 }
 
 func (pfp *piifilterprocessor) getTruncatedKey(key string) string {
