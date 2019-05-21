@@ -439,6 +439,51 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "sql_filter",
+			args: PiiFilter{
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "sql.query",
+						Type: "sql",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"sql.query": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "select password from user where name = 'dave' or name =\"bob\";"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"sql.query": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "select password from user where name = '***' or name =\"***\";"}},
+									},
+									"sql.query.redacted": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	logger := zap.New(zapcore.NewNopCore())

@@ -223,6 +223,9 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span) {
 			case "json":
 				pfp.filterJson(span, elem.Key, attrib)
 				break
+			case "sql":
+				pfp.filterSql(span, elem.Key, attrib)
+				break
 			default: // ignore all other types
 				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
 				break
@@ -243,10 +246,29 @@ func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value 
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
+		pfp.logger.Debug("Problem parsing json. Falling back to value regex filtering")
 		pfp.filterValueRegexs(span, key, value)
 	}
 
 	if jsonChanged {
+		pfp.replaceValue(span, filter.FilteredCatagofies(), key, value, filter.FilteredText())
+	}
+}
+
+func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *tracepb.AttributeValue) {
+	sqlString := value.GetStringValue().Value
+
+	filter := NewSqlFilter(pfp, pfp.logger)
+	parseFail, sqlChanged := filter.Filter(sqlString)
+
+	// if sql is invalid, run the value filter on the sql string to try and
+	// filter out any keywords out of the string
+	if parseFail {
+		pfp.logger.Debug("Problem parsing sql. Falling back to value regex filtering")
+		pfp.filterValueRegexs(span, key, value)
+	}
+
+	if sqlChanged {
 		pfp.replaceValue(span, filter.FilteredCatagofies(), key, value, filter.FilteredText())
 	}
 }
@@ -304,6 +326,8 @@ func getDataType(dataType string) string {
 	switch lcDataType {
 	case "json", "text/json", "application/json": //TODO: should we just search for json substr?
 		lcDataType = "json"
+	case "sql":
+		lcDataType = "sql"
 	default:
 	}
 
