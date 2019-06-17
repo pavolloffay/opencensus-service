@@ -1,6 +1,7 @@
 # More exclusions can be added similar with: -not -path './vendor/*'
 ALL_SRC := $(shell find . -name '*.go' \
                                 -not -path './vendor/*' \
+                                -not -path './tools/*' \
                                 -type f | sort)
 
 # ALL_PKGS is used with 'go cover'
@@ -73,22 +74,12 @@ lint:
 
 .PHONY: vet
 vet:
-	@VETOUT=`$(GOVET) ./... 2>&1`; \
-	if [ "$$VETOUT" ]; then \
-		echo "$(GOVET) FAILED => clean the following vet errors:\n"; \
-		echo "$$VETOUT\n"; \
-		exit 1; \
-	else \
-	    echo "Vet finished successfully"; \
-	fi
+	@$(GOVET) ./...
+	@echo "Vet finished successfully"
 
 .PHONY: install-tools
 install-tools:
-	go get golang.org/x/lint/golint
-	go get -u github.com/google/go-cmp/cmp
-	go get contrib.go.opencensus.io/exporter/jaeger@v0.1.1-0.20190430175949-e8b55949d948
-	go get contrib.go.opencensus.io/exporter/prometheus
-	go get contrib.go.opencensus.io/exporter/zipkin
+	go install golang.org/x/lint/golint
 
 .PHONY: agent
 agent:
@@ -97,6 +88,10 @@ agent:
 .PHONY: collector
 collector:
 	GO111MODULE=on CGO_ENABLED=0 go build -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
+
+.PHONY: unisvc
+unisvc:
+	GO111MODULE=on CGO_ENABLED=0 go build -o ./bin/unisvc_$(GOOS) $(BUILD_INFO) ./cmd/unisvc
 
 .PHONY: docker-component # Not intended to be used directly
 docker-component: check-component
@@ -119,9 +114,12 @@ docker-agent:
 docker-collector:
 	COMPONENT=collector $(MAKE) docker-component
 
+.PHONY: docker-unisvc
+docker-unisvc:
+	COMPONENT=unisvc $(MAKE) docker-component
 
 .PHONY: binaries
-binaries: agent collector
+binaries: agent collector unisvc
 
 .PHONY: binaries-all-sys
 binaries-all-sys:
