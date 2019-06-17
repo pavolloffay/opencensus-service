@@ -156,6 +156,7 @@ exporters:
     compression: "gzip"
     cert-pem-file: "server_ca_public.pem" # optional to enable TLS
     endpoint: "127.0.0.1:55678"
+    reconnection-delay: 2s
 
   jaeger:
     collector_endpoint: "http://127.0.0.1:14268/api/traces"
@@ -217,7 +218,7 @@ zpages:
 The ocagent can be run directly from sources, binary, or a Docker image. If you are planning to run from sources or build
 on your machine start by cloning the repo using `go get -d github.com/census-instrumentation/opencensus-service`.
 
-The minimum Go version required for this project is Go 1.11.4. In addition, you must manually install [Bazaar](https://github.com/census-instrumentation/opencensus-service/blob/master/CONTRIBUTING.md#required-tools)
+The minimum Go version required for this project is Go 1.12.5. In addition, you must manually install [Bazaar](https://github.com/census-instrumentation/opencensus-service/blob/master/CONTRIBUTING.md#required-tools)
 
 1. Run from sources:
 
@@ -274,6 +275,10 @@ The collector is extensible enabling it to support a range of out-of-the-box
 The collector also serves as a control plane for agents/clients by supplying
 them updated configuration (e.g. trace sampling policies), and reporting
 agent/client health information/inventory metadata to downstream exporters.
+
+### <a name="receivers-configuration"></a> Receivers Configuration
+
+For detailed information about configuring receivers for the collector refer to the [receivers README.md](receiver/README.md).
 
 ### <a name="global-attributes"></a> Global Attributes
 
@@ -370,7 +375,7 @@ sampling:
 The collector can be run directly from sources, binary, or a Docker image. If you are planning to run from sources or build
 on your machine start by cloning the repo using `go get -d github.com/census-instrumentation/opencensus-service`.
 
-The minimum Go version required for this project is Go 1.11.4.
+The minimum Go version required for this project is Go 1.12.5.
 
 1. Run from sources:
 ```shell
@@ -423,7 +428,7 @@ Sample configuration file:
 log-level: DEBUG
 
 receivers:
-  opencensus: {} # Runs OpenCensus receiver with default configuration (default behavior)
+  opencensus: {} # Runs OpenCensus receiver with default configuration (default behavior).
 
 queued-exporters:
   jaeger-sender-test: # A friendly name for the exporter
