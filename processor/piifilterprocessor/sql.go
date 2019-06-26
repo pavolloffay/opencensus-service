@@ -16,6 +16,8 @@ type sqlFilter struct {
   categories   *list.List
 }
 
+const SqlFilterDlpTag = "sql_filter"
+
 func NewSqlFilter(pfp *piifilterprocessor, logger *zap.Logger) *sqlFilter {
   return &sqlFilter{
     pfp:        pfp,
@@ -24,7 +26,7 @@ func NewSqlFilter(pfp *piifilterprocessor, logger *zap.Logger) *sqlFilter {
   }
 }
 
-func (f *sqlFilter) Filter(input string) (bool, bool) {
+func (f *sqlFilter) Filter(input string, key string, dlpElements *list.List) (bool, bool) {
   is := NewCaseChangingStream(antlr.NewInputStream(input), true)
   lexer := NewMySqlLexer(is)
 
@@ -55,6 +57,7 @@ func (f *sqlFilter) Filter(input string) (bool, bool) {
   f.filteredText = str.String()
 
   if redactedLiteral {
+    f.pfp.addDlpElementToList(dlpElements, key, "", SqlFilterDlpTag)
     f.categories.PushBack("")
   }
 
@@ -63,10 +66,6 @@ func (f *sqlFilter) Filter(input string) (bool, bool) {
 
 func (f *sqlFilter) FilteredText() string {
   return f.filteredText
-}
-
-func (f *sqlFilter) FilteredCatagofies() *list.List {
-  return f.categories
 }
 
 type CaseChangingStream struct {
