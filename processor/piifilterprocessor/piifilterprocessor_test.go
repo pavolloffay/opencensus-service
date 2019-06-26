@@ -21,6 +21,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 	h := make([]byte, 64)
 	sha3.ShakeSum256(h, []byte("abc123"))
 	sha3Abc123 := fmt.Sprintf("%x", h)
+	redactFalseVal := false
 
 	jsonInput := []byte(`{
 	"a":"aaa",
@@ -185,7 +186,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "^password$",
 						Category: "sensitive",
-						DontRedact: true,
+						Redact: &redactFalseVal,
 					},
 				},
 			},
@@ -276,7 +277,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "(?:\\d[ -]*?){13,16}",
 						Category: "pci",
-						DontRedact: true,
+						Redact: &redactFalseVal,
 					},
 				},
 			},
@@ -527,7 +528,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "^password$",
 						Category: "sensitive",
-						DontRedact: true,
+						Redact: &redactFalseVal,
 					},
 				},
 				ComplexData: []PiiComplexData{
@@ -855,4 +856,39 @@ func compareJsonArrays(expected string, actual string) bool {
 		}
 	}
 	return true
+}
+
+func Test_piifilterprocessor_CompileRegexes(t *testing.T) {
+	redactTrueVal := true
+	redactFalseVal := false
+
+	gomega.RegisterTestingT(t)
+
+	keyRegexes := []PiiElement{
+		{
+			Regex:    "^a$",
+			Category: "sensitive",
+		},
+		{
+			Regex:    "^b$",
+			Category: "sensitive",
+			Redact: &redactTrueVal,
+		},
+		{
+			Regex:    "^c$",
+			Category: "sensitive",
+			Redact: &redactFalseVal,
+		},
+	}
+
+	compiledRegexes, err := compileRegexs(keyRegexes)
+
+	gomega.Expect(err).Should(gomega.BeNil())
+	for regex, piiElem := range(compiledRegexes) {
+		if regex.String() == "^a$" || regex.String() == "^b$"{
+			gomega.Expect(*piiElem.Redact).Should(gomega.BeTrue(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), true, false))
+		} else {
+			gomega.Expect(*piiElem.Redact).Should(gomega.BeFalse(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), false, true))
+		}
+	}
 }

@@ -26,7 +26,10 @@ const (
 type PiiElement struct {
 	Regex    string `mapstructure:"regex"`
 	Category string `mapstructure:"category"`
-	DontRedact bool `mapstructure:"dont-redact"` // Should the value be redacted or not. Default is false i.e to redact
+	// Should the value be redacted or not.
+	// Default is true and in case it's nil compileRegexes() function in this file
+	// will set it to a "true" pointer
+	Redact *bool `mapstructure:"redact,omitempty"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -131,6 +134,10 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error compiling key regex %s already specified", elem.Regex)
 		}
+		if elem.Redact == nil {
+			redact := true
+			elem.Redact = &redact
+		}
 		regexps[regexp] = elem
 	}
 
@@ -188,11 +195,11 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
 			var redacted string
-			if piiElem.DontRedact {
+			if *piiElem.Redact {
+				redacted = pfp.redactString(value)
+			} else {
 				// Dont redact. Just use the same value.
 				redacted = value
-			} else {
-				redacted = pfp.redactString(value)
 			}
 			pfp.addDlpElementToList(dlpElements, actualKey, path, piiElem.Category)
 			return true, redacted
@@ -302,10 +309,10 @@ func (pfp *piifilterprocessor) replacingRegex(value string, regex *regexp.Regexp
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		if piiElem.DontRedact {
-			return src
-		} else {
+		if *piiElem.Redact {
 			return pfp.redactString(src)
+		} else {
+			return src
 		}
 	})
 
