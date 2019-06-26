@@ -39,9 +39,9 @@ type PiiComplexData struct {
 }
 
 type DlpElement struct {
-	Key     string `mapstructure:"key"`
-	Path    string `mapstructure:"path"` // For complex types such as JSON string
-	Type    string `mapstructure:"type"`
+	Key     string `json:"key"`
+	Path    string `json:"path"` // For complex types such as JSON string
+	Type    string `json:"type"`
 }
 
 type PiiFilter struct {
