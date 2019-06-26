@@ -1,6 +1,7 @@
 package piifilterprocessor
 
 import (
+	"fmt"
 	"container/list"
 
 	jsoniter "github.com/json-iterator/go"
@@ -12,27 +13,27 @@ type jsonFilter struct {
 	logger       *zap.Logger
 	json         interface{}
 	filteredText string
-	categories   *list.List
 }
+
+const jsonPathPrefix = "$"
 
 func NewJsonFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	return &jsonFilter{
 		pfp:        pfp,
 		logger:     logger,
-		categories: list.New(),
 	}
 }
 
-func (f *jsonFilter) Filter(input string) (bool, bool) {
+func (f *jsonFilter) Filter(input string, key string, dlpElements *list.List) (bool, bool) {
 	err := jsoniter.UnmarshalFromString(input, &f.json)
 	if err != nil {
 		f.logger.Debug("Problem parsing json", zap.Error(err), zap.String("json", input))
 		return true, false
 	}
 
-	f.filterJson(f.json.(map[string]interface{}))
+	filtered := f.filterJson(f.json.(map[string]interface{}), key, jsonPathPrefix, dlpElements)
 
-	return false, f.categories.Len() > 0
+	return false, filtered
 }
 
 func (f *jsonFilter) FilteredText() string {
@@ -47,35 +48,37 @@ func (f *jsonFilter) FilteredText() string {
 	return f.filteredText
 }
 
-func (f *jsonFilter) FilteredCatagofies() *list.List {
-	return f.categories
-}
-
-func (f *jsonFilter) filterJson(t map[string]interface{}) {
+func (f *jsonFilter) filterJson(t map[string]interface{}, key string, jsonPath string, dlpElements *list.List) bool {
+	filtered := false
 	for k, v := range t {
+		kJsonPath := jsonPath + "." + k
+
 		switch vv := v.(type) {
 		case string:
-			var matchedKey bool
-			for regexp, category := range f.pfp.keyRegexs {
-				if regexp.MatchString(k) {
-					t[k] = f.pfp.redactString(vv)
-					f.categories.PushBack(category)
-					matchedKey = true
-				}
+			matchedKey, redacted := f.pfp.filterKeyRegexs(k, key, vv, kJsonPath, dlpElements)
+			if matchedKey {
+				t[k] = redacted
+				filtered = true
 			}
 			if !matchedKey {
-				vvFiltered, filteredCategories := f.pfp.filterStringValueRegexs(vv)
-				if filteredCategories.Len() > 0 {
+				vvFiltered, stringValueFiltered := f.pfp.filterStringValueRegexs(vv, key, kJsonPath, dlpElements)
+				if stringValueFiltered {
 					t[k] = vvFiltered
-					f.categories.PushFrontList(filteredCategories)
+					filtered = true
 				}
 			}
 		case map[string]interface{}:
-			f.filterJson(vv)
+			filtered = f.filterJson(vv, key, kJsonPath, dlpElements)
 		case []interface{}:
-			for _, u := range vv {
-				f.filterJson(u.(map[string]interface{}))
+			filteredInArray := false
+			for i, u := range vv {
+				arrJsonPath := fmt.Sprintf("%s[%d]", kJsonPath, i)
+				filteredInArray = f.filterJson(u.(map[string]interface{}), key, arrJsonPath, dlpElements)
+				if filteredInArray {
+					filtered = true
+				}
 			}
 		}
 	}
+	return filtered
 }

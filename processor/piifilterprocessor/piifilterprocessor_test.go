@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"encoding/json"
+	"strings"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/census-instrumentation/opencensus-service/data"
@@ -16,62 +18,73 @@ import (
 )
 
 func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
-
 	h := make([]byte, 64)
 	sha3.ShakeSum256(h, []byte("abc123"))
 	sha3Abc123 := fmt.Sprintf("%x", h)
+	redactFalseVal := false
 
-	jsonInput := []byte(`{  
-  "a":"aaa",
-  "password":"root_pw",
-  "b":{  
-    "b_1":"bbb",
-    "password":"nested_pw"
-  },
-  "c":[
-    {"c_1":"ccc"},
-    {"password":"array_pw"}
-  ]}`)
+	jsonInput := []byte(`{
+	"a":"aaa",
+	"password":"root_pw",
+	"b":{
+		"b_1":"bbb",
+		"password":"nested_pw"
+	},
+	"c":[
+		{"c_1":"ccc"},
+		{"password":"array_pw"}
+	]}`)
 
 	jsonExpected := []byte(`{
-  "a":"aaa",
-  "password":"***",
-  "b":{
-    "b_1":"bbb",
-    "password":"***"
-  },
-  "c":[
-    {"c_1":"ccc"},
-    {"password":"***"}
-  ]}`)
+	"a":"aaa",
+	"password":"***",
+	"b":{
+		"b_1":"bbb",
+		"password":"***"
+	},
+	"c":[
+		{"c_1":"ccc"},
+		{"password":"***"}
+	]}`)
 
-	valueJsonInput := []byte(`{  
-  "key_or_value":{  
-    "a":"aaa",
-    "b":"key_or_value"
-    }
-  }`)
+	jsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+													 "{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+													 "{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+
+	valueJsonInput := []byte(`{
+	"key_or_value":{  
+		"a":"aaa",
+		"b":"key_or_value"
+		}
+	}`)
 
 	valueJsonExpected := []byte(`{
-  "key_or_value":{  
-    "a":"aaa",
-    "b":"***"
-    }
-  }`)
+	"key_or_value":{  
+		"a":"aaa",
+		"b":"***"
+		}
+	}`)
+
+	valueJsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.key_or_value.b\",\"type\":\"pii\"}]"
+
+	multipleAttrsExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
+																				"{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+																				"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+																				"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
 	invalidJsonInput := []byte(`{
-  "key_or_value":{
-    a:"aaa",
-    "b":"key_or_value"
-    },
-  }`)
+	"key_or_value":{
+		a:"aaa",
+		"b":"key_or_value"
+		},
+	}`)
 
 	invalidJsonExpected := []byte(`{
-  "***":{
-    a:"aaa",
-    "b":"***"
-    },
-  }`)
+	"***":{
+		a:"aaa",
+		"b":"***"
+		},
+	}`)
 
 	tests := []struct {
 		name string
@@ -79,6 +92,48 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		td   data.TraceData
 		want []data.TraceData
 	}{
+		{
+			name: "no_dlp_filtered",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"tag1": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"tag1": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
 		{
 			name: "filter_key",
 			args: PiiFilter{
@@ -113,8 +168,54 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									"password.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "sensitive"}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"Key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "filter_key_dont_redact",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+						Redact: &redactFalseVal,
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"password": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"password": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -158,8 +259,54 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									"cc.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "pci"}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "filter_value_dont_redact",
+			args: PiiFilter{
+				ValueRegExs: []PiiElement{
+					{
+						Regex:    "(?:\\d[ -]*?){13,16}",
+						Category: "pci",
+						Redact: &redactFalseVal,
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"cc": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "4111 2222 3333 4444"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"cc": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "4111 2222 3333 4444"}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
 									},
 								},
 							},
@@ -207,8 +354,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "*** *** ccc *** *** ccc"}},
 									},
-									"cc.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "pci,sensitive"}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"},{\"key\":\"cc\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -261,17 +408,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"a.password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									"a.password.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "sensitive"}},
-									},
 									"b.password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "bbb123"}},
 									},
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									"password.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "sensitive"}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"a.password\",\"path\":\"\",\"type\":\"sensitive\"},{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -315,8 +459,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: sha3Abc123}},
 									},
-									"password.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"\"}]"}},
 									},
 								},
 							},
@@ -356,6 +500,138 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					},
 				},
 			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"custom.data": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "json_filter_dont_redact",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+						Redact: &redactFalseVal,
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "custom.data",
+						Type: "json",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"custom.data": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"custom.data": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "multiple_attributes",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+					{
+						Regex:    "^auth-key$",
+						Category: "authinfo",
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "custom.data",
+						Type: "json",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"custom.data": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+								},
+								"auth-key": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "some-auth-key"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"custom.data": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
+									},
+									"auth-key": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: multipleAttrsExpectedDlpAttrValue}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 
 		{
@@ -388,7 +664,27 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					},
 				},
 			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"custom.data": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonExpected)}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueJsonInputExpectedDlp}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
+
 		{
 			name: "invalid_json_filter",
 			args: PiiFilter{
@@ -429,8 +725,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonExpected)}},
 									},
-									"custom.data.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "pii"}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"custom.data\",\"path\":\"\",\"type\":\"pii\"}]"}},
 									},
 								},
 							},
@@ -474,8 +770,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"sql.query": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "select password from user where name = '***' or name =\"***\";"}},
 									},
-									"sql.query.redacted": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"sql.query\",\"path\":\"\",\"type\":\"sql_filter\"}]"}},
 									},
 								},
 							},
@@ -500,27 +796,99 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				t.Fatalf("ConsumeTraceData() error = %v, want nil", err)
 			}
 
-			// need to special case the json test, as input/expected json can't
-			// be a simple string compare
-			if tt.name == "json_filter" {
-				gomega.RegisterTestingT(t)
-				redacted := tt.td.Spans[0].Attributes.AttributeMap["custom.data"].GetStringValue().Value
-				gomega.Expect(jsonExpected).Should(gomega.MatchJSON(redacted))
-				categories := tt.td.Spans[0].Attributes.AttributeMap["custom.data.redacted"]
-				gomega.Expect(categories).ShouldNot(gomega.BeNil())
-				gomega.Expect(categories.GetStringValue().Value).Should(gomega.Equal("sensitive,sensitive,sensitive"))
-			} else if tt.name == "value_json_filter" {
-				gomega.RegisterTestingT(t)
-				redacted := tt.td.Spans[0].Attributes.AttributeMap["custom.data"].GetStringValue().Value
-				gomega.Expect(valueJsonExpected).Should(gomega.MatchJSON(redacted))
-				categories := tt.td.Spans[0].Attributes.AttributeMap["custom.data.redacted"]
-				gomega.Expect(categories).ShouldNot(gomega.BeNil())
-				gomega.Expect(categories.GetStringValue().Value).Should(gomega.Equal("pii"))
-			} else {
-				if diff := cmp.Diff(sinkExporter.AllTraces(), tt.want); diff != "" {
-					t.Errorf("Mismatched TraceData\n-Got +Want:\n\t%s", diff)
+			gomega.RegisterTestingT(t)
+
+			attributeStringValueCmpOpt := cmp.Comparer(func(s1, s2 *tracepb.TruncatableString) bool {
+				if s1 == nil || s2 == nil {
+					return cmp.Equal(s1, s2)
 				}
+				// Strings are JSON objects
+				if tt.name != "invalid_json_filter" && strings.HasPrefix(s1.Value, "{") && strings.HasPrefix(s2.Value, "{") {
+					return gomega.Expect(s1.Value).Should(gomega.MatchJSON(s2.Value))
+				}
+				// Strings are JSON arrays
+				if strings.HasPrefix(s1.Value, "[{") &&  strings.HasPrefix(s2.Value, "[{") {
+					return compareJsonArrays(s1.Value, s2.Value)
+				}
+
+				return cmp.Equal(s1, s2)
+			})
+
+			if diff := cmp.Diff(sinkExporter.AllTraces(), tt.want, attributeStringValueCmpOpt); diff != "" {
+				t.Errorf("Mismatched TraceData\n-Got +Want:\n\t%s", diff)
 			}
 		})
+	}
+}
+
+func compareJsonArrays(expected string, actual string) bool {
+	// We are assuming that the tests will have no more than 10 elements
+	// Please change this if you want to test using more elements.
+	expectedArr := make([]*DlpElement, 10)
+	actualArr := make([]*DlpElement, 10)
+	err1 := json.Unmarshal([]byte(expected), &expectedArr)
+	err2 := json.Unmarshal([]byte(actual), &actualArr)
+
+	if err1 != nil {
+		fmt.Printf("Error while unmarshalling expected: %s\n", err1)
+		return false
+	}
+
+	if err2 != nil {
+		fmt.Printf("Error while unmarshalling actual: %s\n", err2)
+		return false
+	}
+
+	if len(actualArr) != len(expectedArr) {
+		return false
+	}
+
+	for _, expectedElem := range expectedArr {
+		found := false
+		for _, actualElem := range actualArr {
+			if cmp.Equal(actualElem, expectedElem) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func Test_piifilterprocessor_CompileRegexes(t *testing.T) {
+	redactTrueVal := true
+	redactFalseVal := false
+
+	gomega.RegisterTestingT(t)
+
+	keyRegexes := []PiiElement{
+		{
+			Regex:    "^a$",
+			Category: "sensitive",
+		},
+		{
+			Regex:    "^b$",
+			Category: "sensitive",
+			Redact: &redactTrueVal,
+		},
+		{
+			Regex:    "^c$",
+			Category: "sensitive",
+			Redact: &redactFalseVal,
+		},
+	}
+
+	compiledRegexes, err := compileRegexs(keyRegexes)
+
+	gomega.Expect(err).Should(gomega.BeNil())
+	for regex, piiElem := range(compiledRegexes) {
+		if regex.String() == "^a$" || regex.String() == "^b$"{
+			gomega.Expect(*piiElem.Redact).Should(gomega.BeTrue(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), true, false))
+		} else {
+			gomega.Expect(*piiElem.Redact).Should(gomega.BeFalse(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), false, true))
+		}
 	}
 }
