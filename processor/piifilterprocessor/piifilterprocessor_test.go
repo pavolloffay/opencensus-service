@@ -167,7 +167,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"Key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
@@ -213,7 +213,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
@@ -258,7 +258,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
 									},
 								},
@@ -304,7 +304,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "4111 2222 3333 4444"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
 									},
 								},
@@ -353,7 +353,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "*** *** ccc *** *** ccc"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"},{\"key\":\"cc\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
@@ -413,7 +413,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"a.password\",\"path\":\"\",\"type\":\"sensitive\"},{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
@@ -458,7 +458,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: sha3Abc123}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"\"}]"}},
 									},
 								},
@@ -509,7 +509,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
 									},
 								},
@@ -561,7 +561,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
 									},
 								},
@@ -622,7 +622,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"auth-key": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: multipleAttrsExpectedDlpAttrValue}},
 									},
 								},
@@ -673,7 +673,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonExpected)}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueJsonInputExpectedDlp}},
 									},
 								},
@@ -724,7 +724,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonExpected)}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"custom.data\",\"path\":\"\",\"type\":\"pii\"}]"}},
 									},
 								},
@@ -769,7 +769,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"sql.query": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "select password from user where name = '***' or name =\"***\";"}},
 									},
-									DlpTag: {
+									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"sql.query\",\"path\":\"\",\"type\":\"sql_filter\"}]"}},
 									},
 								},

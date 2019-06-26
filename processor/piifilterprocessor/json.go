@@ -1,7 +1,7 @@
 package piifilterprocessor
 
 import (
-	"strconv"
+	"fmt"
 	"container/list"
 
 	jsoniter "github.com/json-iterator/go"
@@ -15,7 +15,7 @@ type jsonFilter struct {
 	filteredText string
 }
 
-const JsonPathPrefix = "$"
+const jsonPathPrefix = "$"
 
 func NewJsonFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	return &jsonFilter{
@@ -31,7 +31,7 @@ func (f *jsonFilter) Filter(input string, key string, dlpElements *list.List) (b
 		return true, false
 	}
 
-	filtered := f.filterJson(f.json.(map[string]interface{}), key, JsonPathPrefix, dlpElements)
+	filtered := f.filterJson(f.json.(map[string]interface{}), key, jsonPathPrefix, dlpElements)
 
 	return false, filtered
 }
@@ -72,7 +72,7 @@ func (f *jsonFilter) filterJson(t map[string]interface{}, key string, jsonPath s
 		case []interface{}:
 			filteredInArray := false
 			for i, u := range vv {
-				arrJsonPath := kJsonPath + "[" + strconv.Itoa(i) + "]"
+				arrJsonPath := fmt.Sprintf("%s[%d]", kJsonPath, i)
 				filteredInArray = f.filterJson(u.(map[string]interface{}), key, arrJsonPath, dlpElements)
 				if filteredInArray {
 					filtered = true
