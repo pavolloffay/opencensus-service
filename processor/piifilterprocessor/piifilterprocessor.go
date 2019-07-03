@@ -156,6 +156,10 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 
 		dlpElements := list.New()
 		for key, value := range span.Attributes.AttributeMap {
+			if value.GetStringValue() == nil {
+				continue
+			}
+
 			if _, ok := pfp.complexData[key]; ok {
 				// value filters on complex data are run as part of
 				// complex data filtering

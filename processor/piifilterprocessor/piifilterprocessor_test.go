@@ -180,6 +180,48 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		},
 
 		{
+			name: "filter_key_int_value",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"code": {
+									Value: &tracepb.AttributeValue_IntValue{IntValue: 120},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"code": {
+										Value: &tracepb.AttributeValue_IntValue{IntValue: 120},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
 			name: "filter_key_dont_redact",
 			args: PiiFilter{
 				KeyRegExs: []PiiElement{
