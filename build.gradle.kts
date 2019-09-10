@@ -4,7 +4,6 @@ plugins {
 }
 
 group = "ai.traceable.agent"
-buildDir = File("$projectDir/build-gradle")
 
 traceableDocker {
   defaultImage {
