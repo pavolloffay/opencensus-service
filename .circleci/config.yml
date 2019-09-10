@@ -40,7 +40,7 @@ jobs:
       - run: ./gradlew dockerPushImage :tag -Prelease
       - run: &push-tags
           name: Push git tags
-          command: git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD) --follow-tags
+          command: git push origin $(./gradlew -q printVersion)
 
   publish-release:
     docker:
