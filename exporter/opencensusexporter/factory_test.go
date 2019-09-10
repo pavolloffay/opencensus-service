@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/census-instrumentation/opencensus-service/internal/compression"
 	"github.com/census-instrumentation/opencensus-service/internal/factories"
 )
 
@@ -80,13 +79,13 @@ func TestCreateTraceExporter(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "Compression",
-			config: ConfigV2{
-				Endpoint:    defaultTestEndPoint,
-				Compression: compression.Gzip,
-			},
-		},
+		// {
+		// 	name: "Compression",
+		// 	config: ConfigV2{
+		// 		Endpoint:    defaultTestEndPoint,
+		// 		Compression: compression.Gzip,
+		// 	},
+		// },
 		{
 			name: "Headers",
 			config: ConfigV2{
@@ -97,13 +96,13 @@ func TestCreateTraceExporter(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "NumWorkers",
-			config: ConfigV2{
-				Endpoint:   defaultTestEndPoint,
-				NumWorkers: 3,
-			},
-		},
+		// {
+		// 	name: "NumWorkers",
+		// 	config: ConfigV2{
+		// 		Endpoint:   defaultTestEndPoint,
+		// 		NumWorkers: 3,
+		// 	},
+		// },
 		{
 			name: "CompressionError",
 			config: ConfigV2{

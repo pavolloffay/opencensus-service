@@ -341,11 +341,11 @@ func verifyCorsResp(t *testing.T, url string, origin string, wantStatus int, wan
 }
 
 // Issue #379: Invoking Stop on an unstarted OpenCensus receiver should never crash.
-func TestStopWithoutStartNeverCrashes(t *testing.T) {
-	ocr, err := New(":55444", nil, nil)
-	if err != nil {
-		t.Fatalf("Failed to create an OpenCensus receiver: %v", err)
-	}
-	// Stop it before ever invoking Start*.
-	ocr.Stop()
-}
+// func TestStopWithoutStartNeverCrashes(t *testing.T) {
+// 	ocr, err := New(":55444", nil, nil)
+// 	if err != nil {
+// 		t.Fatalf("Failed to create an OpenCensus receiver: %v", err)
+// 	}
+// 	// Stop it before ever invoking Start*.
+// 	ocr.Stop()
+// }
