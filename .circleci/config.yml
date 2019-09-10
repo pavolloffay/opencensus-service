@@ -14,6 +14,7 @@ jobs:
     steps:
       - checkout
       - *attach_workspace
+      - run: sudo apt-get update && sudo apt-get install -y bzr
       - run: make test
       - run: make collector
       - run: cp -v ./bin/occollector_linux /tmp/workspace
