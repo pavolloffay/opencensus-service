@@ -1,0 +1,76 @@
+version: 2
+references:
+  workspace_root: &workspace_root
+    /tmp/workspace
+  attach_workspace: &attach_workspace
+    attach_workspace:
+      at: *workspace_root
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - *attach_workspace
+      - run: make test
+      - run: make collector
+      - run: cp -v ./bin/occollector_linux /tmp/workspace
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - occollector_linux
+
+  publish-prerelease:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    steps:
+      - add_ssh_keys: &ssh-fingerprint
+          fingerprints:
+            - "9b:ec:1d:cd:4d:46:f9:2d:b7:7a:80:6d:16:ca:e1:4d"
+      - checkout
+      - *attach_workspace
+      - setup_remote_docker
+      - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
+      - run: ./gradlew dockerPushImage :tag -Prelease
+      - run: &push-tags
+          name: Push git tags
+          command: git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD) --follow-tags
+
+  publish-release:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    working_directory: ~/repo
+    steps:
+      - add_ssh_keys: *ssh-fingerprint
+      - checkout
+      - *attach_workspace
+      - setup_remote_docker
+      - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
+      - run: ./gradlew dockerPushImage :tag -Prelease -PpromoteToRelease
+      - run: *push-tags
+
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - build:
+          context: ci-credentials
+      - publish-prerelease:
+          context: ci-credentials
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - develop
+      - publish-release:
+          context: ci-credentials
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
