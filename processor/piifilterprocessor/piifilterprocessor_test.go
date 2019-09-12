@@ -2,10 +2,10 @@ package piifilterprocessor
 
 import (
 	"context"
-	"fmt"
-	"testing"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"testing"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/census-instrumentation/opencensus-service/data"
@@ -48,8 +48,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 	]}`)
 
 	jsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
-													 "{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
-													 "{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+		"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
 	valueJsonInput := []byte(`{
 	"key_or_value":{  
@@ -68,9 +68,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 	valueJsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.key_or_value.b\",\"type\":\"pii\"}]"
 
 	multipleAttrsExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
-																				"{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
-																				"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
-																				"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+		"{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
 	invalidJsonInput := []byte(`{
 	"key_or_value":{
@@ -228,7 +228,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "^password$",
 						Category: "sensitive",
-						Redact: &redactFalseVal,
+						Redact:   &redactFalseVal,
 					},
 				},
 			},
@@ -319,7 +319,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "(?:\\d[ -]*?){13,16}",
 						Category: "pci",
-						Redact: &redactFalseVal,
+						Redact:   &redactFalseVal,
 					},
 				},
 			},
@@ -570,7 +570,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					{
 						Regex:    "^password$",
 						Category: "sensitive",
-						Redact: &redactFalseVal,
+						Redact:   &redactFalseVal,
 					},
 				},
 				ComplexData: []PiiComplexData{
@@ -849,7 +849,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					return gomega.Expect(s1.Value).Should(gomega.MatchJSON(s2.Value))
 				}
 				// Strings are JSON arrays
-				if strings.HasPrefix(s1.Value, "[{") &&  strings.HasPrefix(s2.Value, "[{") {
+				if strings.HasPrefix(s1.Value, "[{") && strings.HasPrefix(s2.Value, "[{") {
 					return compareJsonArrays(s1.Value, s2.Value)
 				}
 
@@ -914,20 +914,20 @@ func Test_piifilterprocessor_CompileRegexes(t *testing.T) {
 		{
 			Regex:    "^b$",
 			Category: "sensitive",
-			Redact: &redactTrueVal,
+			Redact:   &redactTrueVal,
 		},
 		{
 			Regex:    "^c$",
 			Category: "sensitive",
-			Redact: &redactFalseVal,
+			Redact:   &redactFalseVal,
 		},
 	}
 
 	compiledRegexes, err := compileRegexs(keyRegexes)
 
 	gomega.Expect(err).Should(gomega.BeNil())
-	for regex, piiElem := range(compiledRegexes) {
-		if regex.String() == "^a$" || regex.String() == "^b$"{
+	for regex, piiElem := range compiledRegexes {
+		if regex.String() == "^a$" || regex.String() == "^b$" {
 			gomega.Expect(*piiElem.Redact).Should(gomega.BeTrue(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), true, false))
 		} else {
 			gomega.Expect(*piiElem.Redact).Should(gomega.BeFalse(), fmt.Sprintf("For %s: Expected %t. Got %t", regex.String(), false, true))
