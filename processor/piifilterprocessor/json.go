@@ -33,7 +33,7 @@ func (f *jsonFilter) Filter(input string, key string, dlpElements *list.List) (b
 
 	err := jsoniter.UnmarshalFromString(input, &f.json)
 	if err != nil {
-		f.logger.Debug("Problem parsing json", zap.Error(err))
+		f.logger.Info("Problem parsing json", zap.Error(err), zap.String("json", input))
 		return true, false
 	}
 
@@ -47,7 +47,7 @@ func (f *jsonFilter) FilteredText() string {
 		var err error
 		f.filteredText, err = jsoniter.MarshalToString(f.json)
 		if err != nil {
-			f.logger.Debug("Problem converting json", zap.Error(err))
+			f.logger.Info("Problem converting json", zap.Error(err))
 		}
 	}
 
