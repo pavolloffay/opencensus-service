@@ -86,16 +86,16 @@ func TestCreateTraceExporter(t *testing.T) {
 		// 		Compression: compression.Gzip,
 		// 	},
 		// },
-		{
-			name: "Headers",
-			config: ConfigV2{
-				Endpoint: defaultTestEndPoint,
-				Headers: map[string]string{
-					"hdr1": "val1",
-					"hdr2": "val2",
-				},
-			},
-		},
+		// {
+		// 	name: "Headers",
+		// 	config: ConfigV2{
+		// 		Endpoint: defaultTestEndPoint,
+		// 		Headers: map[string]string{
+		// 			"hdr1": "val1",
+		// 			"hdr2": "val2",
+		// 		},
+		// 	},
+		// },
 		// {
 		// 	name: "NumWorkers",
 		// 	config: ConfigV2{
