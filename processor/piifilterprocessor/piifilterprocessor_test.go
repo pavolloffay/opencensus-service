@@ -523,8 +523,8 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:  "custom.data",
-						Type: "json",
+						Key:     "custom.data",
+						TypeKey: "http.request.headers.content-type",
 					},
 				},
 			},
@@ -536,6 +536,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"custom.data": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+								},
+								"http.request.headers.content-type": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string("application/json;charset=utf-8")}},
 								},
 							},
 						},
@@ -551,6 +554,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"custom.data": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
+									},
+									"http.request.headers.content-type": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string("application/json;charset=utf-8")}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},

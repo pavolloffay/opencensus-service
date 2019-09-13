@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime"
 	"regexp"
 	"strings"
 
@@ -244,7 +245,7 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, dlpElements
 				dataType = elem.Type
 			} else {
 				if typeValue, ok := attribMap[elem.TypeKey]; ok {
-					dataType = getDataType(typeValue.GetStringValue().Value)
+					dataType = pfp.getDataType(typeValue.GetStringValue().Value)
 				}
 			}
 
@@ -281,7 +282,7 @@ func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value 
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.logger.Debug("Problem parsing json. Falling back to value regex filtering")
+		pfp.logger.Info("Problem parsing json. Falling back to value regex filtering", zap.String("json", jsonString))
 		pfp.filterValueRegexs(span, key, value, dlpElements)
 	}
 
@@ -299,7 +300,7 @@ func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *
 	// if sql is invalid, run the value filter on the sql string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.logger.Debug("Problem parsing sql. Falling back to value regex filtering")
+		pfp.logger.Info("Problem parsing sql. Falling back to value regex filtering", zap.String("sql", sqlString))
 		pfp.filterValueRegexs(span, key, value, dlpElements)
 	}
 
@@ -347,11 +348,16 @@ func (pfp *piifilterprocessor) getTruncatedKey(key string) string {
 	return key
 }
 
-func getDataType(dataType string) string {
-	lcDataType := strings.ToLower(dataType)
+func (pfp *piifilterprocessor) getDataType(dataType string) string {
+	mt, _, err := mime.ParseMediaType(dataType)
+	if err != nil {
+		pfp.logger.Info("Could not parse media type", zap.Error(err), zap.String("dataType", dataType))
+		return ""
+	}
 
+	lcDataType := mt
 	switch lcDataType {
-	case "json", "text/json", "application/json": //TODO: should we just search for json substr?
+	case "json", "text/json", "text/x-json", "application/json":
 		lcDataType = "json"
 	case "sql":
 		lcDataType = "sql"
