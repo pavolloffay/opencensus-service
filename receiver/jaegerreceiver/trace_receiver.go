@@ -27,7 +27,6 @@ import (
 	agentapp "github.com/jaegertracing/jaeger/cmd/agent/app"
 	"github.com/jaegertracing/jaeger/cmd/agent/app/configmanager"
 	"github.com/jaegertracing/jaeger/cmd/agent/app/reporter"
-	"github.com/jaegertracing/jaeger/cmd/collector/app"
 	"github.com/jaegertracing/jaeger/thrift-gen/baggage"
 	"github.com/jaegertracing/jaeger/thrift-gen/jaeger"
 	"github.com/jaegertracing/jaeger/thrift-gen/sampling"
@@ -369,8 +368,8 @@ func (jr *jReceiver) startCollector() error {
 	}
 
 	nr := mux.NewRouter()
-	apiHandler := app.NewAPIHandler(jr)
-	apiHandler.RegisterRoutes(nr)
+	apiHandler := newAPIHandler(jr)
+	apiHandler.registerRoutes(nr)
 	jr.collectorServer = &http.Server{Handler: nr}
 	go func() {
 		_ = jr.collectorServer.Serve(cln)
