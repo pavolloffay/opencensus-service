@@ -190,7 +190,7 @@ func (rw *receiverWorker) export(longLivedCtx context.Context, tracedata *data.T
 	}
 
 	// Trace this method
-	ctx, span := trace.StartSpan(context.Background(), "OpenCensusTraceReceiver.Export")
+	_, span := trace.StartSpan(context.Background(), "OpenCensusTraceReceiver.Export")
 	defer span.End()
 
 	// TODO: (@odeke-em) investigate if it is necessary
@@ -200,7 +200,7 @@ func (rw *receiverWorker) export(longLivedCtx context.Context, tracedata *data.T
 	// If the starting RPC has a parent span, then add it as a parent link.
 	observability.SetParentLink(longLivedCtx, span)
 
-	rw.receiver.nextConsumer.ConsumeTraceData(ctx, *tracedata)
+	rw.receiver.nextConsumer.ConsumeTraceData(longLivedCtx, *tracedata)
 
 	span.Annotate([]trace.Attribute{
 		trace.Int64Attribute("num_spans", int64(len(tracedata.Spans))),
