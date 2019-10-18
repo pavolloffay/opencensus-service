@@ -34,9 +34,10 @@ import (
 	"github.com/census-instrumentation/opencensus-service/internal/config"
 	"github.com/census-instrumentation/opencensus-service/processor/addattributesprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/customeridprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
-        "github.com/census-instrumentation/opencensus-service/processor/tracesamplerprocessor"
-        "github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/tracesamplerprocessor"
 )
 
 func createExporters(v *viper.Viper, logger *zap.Logger) ([]func(), []consumer.TraceConsumer, []consumer.MetricsConsumer) {
@@ -326,6 +327,7 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			zap.Any("values", multiProcessorCfg.Global.Attributes.Values),
 			zap.Any("key-mapping", multiProcessorCfg.Global.Attributes.KeyReplacements),
 			zap.Any("pii-filter", multiProcessorCfg.Global.Attributes.PiiFilter),
+			zap.Any("customerid-reader", multiProcessorCfg.Global.Attributes.CustomerIDReader),
 		)
 
 		var err error
@@ -349,6 +351,12 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			tp, err = piifilterprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.PiiFilter, logger)
 			if err != nil {
 				logger.Warn("Failed to build the PII attribute filter processor: ", zap.Error(err))
+			}
+		}
+		if multiProcessorCfg.Global.Attributes.CustomerIDReader != nil && multiProcessorCfg.Global.Attributes.CustomerIDReader.Enabled {
+			tp, err = customeridprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.CustomerIDReader, logger)
+			if err != nil {
+				logger.Warn("Failed to build the customer id processor: ", zap.Error(err))
 			}
 		}
 	}
