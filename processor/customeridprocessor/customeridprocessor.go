@@ -23,6 +23,7 @@ type customeridprocessor struct {
 	secretKey    string
 }
 
+// CustomerIDReader is used to configure this processor.
 type CustomerIDReader struct {
 	// Enabled when true will turn on this processor. (Is this necessary or will precense of this config denote being enabled?)
 	Enabled bool `mapstructure:"enabled"`
@@ -39,6 +40,14 @@ const (
 	customerIDSpanTagKey            = "traceable.customer_id"
 )
 
+// NewTraceProcessor reads the customer ID from the jwt token and adds it to every span.
+// If for whatever reason, we could not read the jwt token, we return an error and drop
+// the spans. Having this consumer enabled ensures that all spans that pass through are
+// annotated with the customer ID.
+// Reasons for not finding the customer ID could be:
+// 1. Customer ID jwt not present in the headers in the ctx arg in ConsumeTraceData method.
+// 2. Invalid jwt that fails to verify due to using the wrong key, jwt expiration or unhandled signing algo.
+// 3. No customer ID claim in the jwt or a cusomer ID claim that is not a string.
 func NewTraceProcessor(nextConsumer consumer.TraceConsumer, customerIDReader *CustomerIDReader, logger *zap.Logger) (processor.TraceProcessor, error) {
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
