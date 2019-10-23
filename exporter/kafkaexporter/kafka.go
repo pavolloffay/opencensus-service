@@ -17,11 +17,9 @@ package kafkaexporter
 import (
 	"fmt"
 
-	"github.com/spf13/viper"
-	kafka "github.com/yancl/opencensus-go-exporter-kafka"
-
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/exporter/exporterwrapper"
+	"github.com/spf13/viper"
 )
 
 type kafkaConfig struct {
@@ -44,7 +42,7 @@ func KafkaExportersFromViper(v *viper.Viper) (tps []consumer.TraceConsumer, mps 
 		return nil, nil, nil, nil
 	}
 
-	kde, kerr := kafka.NewExporter(kafka.Options{
+	kde, kerr := newKafkaExporter(Options{
 		Brokers: kc.Brokers,
 		Topic:   kc.Topic,
 	})
@@ -53,7 +51,7 @@ func KafkaExportersFromViper(v *viper.Viper) (tps []consumer.TraceConsumer, mps 
 		return nil, nil, nil, fmt.Errorf("Cannot configure Kafka Trace exporter: %v", kerr)
 	}
 
-	kte, err := exporterwrapper.NewExporterWrapper("kafka", "ocservice.exporter.Kafka.ConsumeTraceData", kde)
+	kte, err := exporterwrapper.NewExporterWrapperForTrace("kafka", "ocservice.exporter.Kafka.ConsumeTraceDataInJaegerFormat", kde)
 	if err != nil {
 		return nil, nil, nil, err
 	}

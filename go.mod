@@ -10,6 +10,7 @@ require (
 	contrib.go.opencensus.io/resource v0.1.2
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/DataDog/opencensus-go-exporter-datadog v0.0.0-20181026070331-e7c4bd17b329
+	github.com/Shopify/sarama v1.19.0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
@@ -18,6 +19,7 @@ require (
 	github.com/dgrijalva/jwt-go v0.0.0-20161101193935-9ed569b5d1ac
 	github.com/go-kit/kit v0.8.0
 	github.com/gogo/googleapis v1.2.0 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.3.1
 	github.com/gorilla/mux v1.6.2

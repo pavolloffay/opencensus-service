@@ -40,6 +40,10 @@ type OCSpanExporter interface {
 	ExportSpan(sd *trace.SpanData)
 }
 
+type OCTraceExporter interface {
+	ExportTrace(td data.TraceData)
+}
+
 // NewExporterWrapper returns a consumer.TraceConsumer that converts OpenCensus Proto TraceData
 // to OpenCensus-Go SpanData and calls into the given trace.Exporter.
 //
@@ -53,6 +57,20 @@ func NewExporterWrapper(exporterName string, spanName string, ocExporter OCSpanE
 		exporterName,
 		func(ctx context.Context, td data.TraceData) (int, error) {
 			return PushOcProtoSpansToOCTraceExporter(ocExporter, td)
+		},
+		exporterhelper.WithSpanName(spanName),
+		exporterhelper.WithRecordMetrics(true),
+	)
+}
+
+// NewExporterWrapperForTrace returns a consumer.TraceConsumer that takes OpenCensus Proto TraceData
+// as and calls on an implementation of OCTraceExporter.ExportTrace. See exporter/kafkaexporter/kafka.go
+// for an example.
+func NewExporterWrapperForTrace(exporterName string, spanName string, ocExporter OCTraceExporter) (exporter.TraceExporter, error) {
+	return exporterhelper.NewTraceExporter(
+		exporterName,
+		func(ctx context.Context, td data.TraceData) (int, error) {
+			return pushOcProtoTraceToOCTraceExporter(ocExporter, td)
 		},
 		exporterhelper.WithSpanName(spanName),
 		exporterhelper.WithRecordMetrics(true),
@@ -77,4 +95,10 @@ func PushOcProtoSpansToOCTraceExporter(ocExporter OCSpanExporter, td data.TraceD
 	}
 
 	return len(td.Spans) - len(goodSpans), internal.CombineErrors(errs)
+}
+
+func pushOcProtoTraceToOCTraceExporter(ocExporter OCTraceExporter, td data.TraceData) (int, error) {
+	ocExporter.ExportTrace(td)
+
+	return 0, nil
 }
