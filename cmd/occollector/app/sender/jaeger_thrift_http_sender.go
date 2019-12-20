@@ -17,12 +17,10 @@ package sender
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -72,19 +70,10 @@ func NewJaegerThriftHTTPSender(
 	zlogger *zap.Logger,
 	options ...HTTPOption,
 ) *JaegerThriftHTTPSender {
-
-	var insecureSkipVerify = false
-	if val := os.Getenv("INSECURE_SKIP_VERIFY"); len(val) > 0 && val == "1" {
-		insecureSkipVerify = true
-	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
-	}
-
 	s := &JaegerThriftHTTPSender{
 		url:     url,
 		headers: headers,
-		client:  &http.Client{Timeout: defaultHTTPTimeout, Transport: tr},
+		client:  &http.Client{Timeout: defaultHTTPTimeout},
 		logger:  zlogger,
 	}
 
