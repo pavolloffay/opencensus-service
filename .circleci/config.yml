@@ -1,0 +1,62 @@
+version: 2.1
+
+references:
+  workspace_root: &workspace_root
+    /tmp/workspace
+
+executors:
+  gradle_docker:
+    docker:
+      - image: circleci/openjdk:11-jdk
+  golang_docker:
+    docker:
+      - image: circleci/golang:1.12
+
+commands:
+  setup_build_environment:
+    steps:
+      - checkout
+      - attach_workspace:
+          at: *workspace_root
+
+jobs:
+  build:
+    executor: golang_docker
+    resource_class: large
+    steps:
+      - setup_build_environment
+      - run: sudo apt-get update && sudo apt-get install -y bzr
+      - run: make install-tools
+      - run: make test
+      - run: make collector
+      - run: cp -v ./bin/occollector_linux /tmp/workspace
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - occollector_linux
+
+  publish:
+    executor: gradle_docker
+    steps:
+      - add_ssh_keys: &ssh-fingerprint
+          fingerprints:
+            - "9b:ec:1d:cd:4d:46:f9:2d:b7:7a:80:6d:16:ca:e1:4d"
+      - setup_build_environment
+      - setup_remote_docker
+      - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
+      - run: ./gradlew dockerPushImages
+
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - build:
+          context: ci-credentials
+      - publish:
+          context: ci-credentials
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master

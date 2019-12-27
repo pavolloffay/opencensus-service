@@ -129,10 +129,11 @@ type QueuedSpanProcessorCfg struct {
 // AttributesCfg holds configuration for attributes that can be added to all spans
 // going through a processor.
 type AttributesCfg struct {
-	Overwrite       bool                                   `mapstructure:"overwrite"`
-	Values          map[string]interface{}                 `mapstructure:"values"`
-	KeyReplacements []attributekeyprocessor.KeyReplacement `mapstructure:"key-mapping,omitempty"`
-	PiiFilter       *piifilterprocessor.PiiFilter          `mapstructure:"pii-filter,omitempty"`
+	Overwrite               bool                                   `mapstructure:"overwrite"`
+	Values                  map[string]interface{}                 `mapstructure:"values"`
+	KeyReplacements         []attributekeyprocessor.KeyReplacement `mapstructure:"key-mapping,omitempty"`
+	PiiFilter               *piifilterprocessor.PiiFilter          `mapstructure:"pii-filter,omitempty"`
+	CustomerIDReaderEnabled bool                                   `mapstructure:"customerid-reader-enabled"`
 }
 
 // GlobalProcessorCfg holds global configuration values that apply to all processors

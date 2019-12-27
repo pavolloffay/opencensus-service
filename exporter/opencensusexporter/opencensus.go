@@ -17,9 +17,16 @@ package opencensusexporter
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"contrib.go.opencensus.io/exporter/ocagent"
 	agenttracepb "github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1"
@@ -53,12 +60,18 @@ type opencensusConfig struct {
 	UseSecure           bool              `mapstructure:"secure,omitempty"`
 	ReconnectionDelay   time.Duration     `mapstructure:"reconnection-delay,omitempty"`
 	KeepaliveParameters *keepaliveConfig  `mapstructure:"keepalive,omitempty"`
+	IamEndpoint         string            `mapstructure:"iam-endpoint,omitempty"`
+	Token               string            `mapstructure:"token,omitempty"`
 	// TODO: service name options.
 }
 
 type ocagentExporter struct {
-	counter   uint32
-	exporters chan *ocagent.Exporter
+	counter     uint32
+	exporters   chan *ocagent.Exporter
+	iamEndpoint string
+	token       string
+	headers     *map[string]string
+	opts        []ocagent.ExporterOption
 }
 
 type ocTraceExporterErrorCode int
@@ -105,6 +118,16 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 		return nil, nil, nil, &ocTraceExporterError{
 			code: errEndpointRequired,
 			msg:  "OpenCensus exporter config requires an Endpoint",
+		}
+	}
+
+	if len(ocac.Token) > 0 {
+		if ocac.Headers == nil {
+			ocac.Headers = make(map[string]string)
+		}
+		err := refreshJWT(ocac.IamEndpoint, ocac.Token, &ocac.Headers)
+		if err != nil {
+			return nil, nil, nil, err
 		}
 	}
 
@@ -181,6 +204,11 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 		return nil, nil, nil, err
 	}
 
+	oce.iamEndpoint = ocac.IamEndpoint
+	oce.token = ocac.Token
+	oce.opts = opts
+	oce.headers = &ocac.Headers
+
 	tps = append(tps, oexp)
 	doneFns = append(doneFns, oce.stop)
 
@@ -236,9 +264,60 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 			Node:     td.Node,
 		},
 	)
+
+	// refresh the jwt if it's expired
+	if err != nil {
+		if len(oce.token) > 0 {
+			status, ok := status.FromError(err)
+			if ok && status.Code() == codes.Unauthenticated {
+				err := refreshJWT(oce.iamEndpoint, oce.token, oce.headers)
+				if err == nil {
+					oce.opts = append(oce.opts, ocagent.WithHeaders(*oce.headers))
+					updatedExporter, err := ocagent.NewExporter(oce.opts...)
+					if err == nil {
+						exporter.Stop()
+						exporter = updatedExporter
+					}
+				}
+			}
+		}
+	}
+
 	oce.exporters <- exporter
 	if err != nil {
 		return len(td.Spans), err
 	}
+
 	return 0, nil
+}
+
+func refreshJWT(iamEndpoint string, token string, headers *map[string]string) error {
+	params := url.Values{}
+	params.Add("refresh_token", token)
+	r, err := http.Get("https://" + iamEndpoint + "/refresh-agent-token?" + params.Encode())
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	if r.StatusCode != 200 {
+		return fmt.Errorf("refresh-agent-token returned non 200 status code %d:%s ", r.StatusCode, string(bodyBytes))
+	}
+
+	type RefreshAgentTokenResp struct {
+		Jwt string `json:"jwt"`
+	}
+	var bodyJSON RefreshAgentTokenResp
+	err = json.Unmarshal(bodyBytes, &bodyJSON)
+	if err != nil {
+		return err
+	}
+
+	(*headers)["Authorization"] = "Bearer " + bodyJSON.Jwt
+	return nil
 }

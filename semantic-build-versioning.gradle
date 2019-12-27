@@ -1,0 +1,17 @@
+preRelease {
+
+  startingVersion = 'prerelease.0'
+  pattern = /prerelease/
+  // The bumping scheme is prerelease.0 -> prerelease.1 -> ... -> prerelease.n
+  bump = {
+    "prerelease.${((it - ~/^prerelease\./) as int) + 1}"
+  }
+}
+
+autobump {
+  majorPattern = ~/(?m)^\[bump-major\]$/       // match "[bump-major]" on its own line without leading or trailing characters
+  minorPattern = ~/(?m)^\[bump-minor\]$/       // match "[bump-minor]" on its own line without leading or trailing characters
+  patchPattern = ~/(?m)^\[bump-patch\]$/       // match "[bump-patch]" on its own line without leading or trailing characters
+  newPreReleasePattern = ~/(?m)^\[bump-(patch|major|minor)\]$/ // match any of the above as a new prerelease
+  promoteToReleasePattern = null // any merge to master is promoted to release
+}
