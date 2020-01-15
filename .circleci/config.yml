@@ -44,7 +44,9 @@ jobs:
       - setup_build_environment
       - setup_remote_docker
       - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
-      - run: ./gradlew dockerPushImages
+      - run: ./gradlew :tag -Prelease
+      - run: ./gradlew dockerPushImage
+      - run: git push origin $(./gradlew -q :printVersion)
 
 workflows:
   version: 2
