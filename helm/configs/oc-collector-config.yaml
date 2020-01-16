@@ -1,0 +1,15 @@
+log-level: INFO
+receivers:
+  opencensus:
+    # keepalive settings can help load balancing, see receiver/README.md for more info.
+    keepalive:
+      server-parameters:
+        max-connection-age: 120s
+        max-connection-age-grace: 30s            
+exporters:
+  kafka:
+    brokers: ["bootstrap:9092"]
+    topic: "jaeger-spans"
+global:
+  attributes:
+    customerid-reader-enabled: true

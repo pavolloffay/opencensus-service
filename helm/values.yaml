@@ -1,0 +1,87 @@
+# Default values for the helm chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+###########
+# Deployment and Service
+###########
+minReadySeconds: 5
+progressDeadlineSeconds: 120
+replicaCount: 1
+maxUnavailable: 0
+
+image:
+  repository: traceableai-docker.jfrog.io/ai.traceable.agent/oc-collector
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: regcred
+
+env:
+  - name: GOGC
+    value: "80"
+
+containerPort: 55678
+namespace: traceable
+
+service:
+  port: 55678
+  metadataLabels:
+    app: oc-collector
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+   limits:
+     cpu: 1
+     memory: 2Gi
+   requests:
+     cpu: 200m
+     memory: 400Mi
+
+podLabels:
+  app: oc-collector
+
+# The Deployment Selector match labels are different from the pod labels. Note that they should be a subset of the pod
+# labels. You append new labels to them but cannot remove labels. If you remove or modify the labels you will need to
+# delete the existing deployment bearing the same name and then redeploy. This is the reason why they are separated from
+# the pod labels. You can add and remove pod labels without having an effect on the deployment.
+# Also, please use "apiVersion: apps/v1" instead of the deprecated "apiVersion: extensions/v1beta1" for the deployment
+# apiVersion in the yaml file.
+deploymentSelectorMatchLabels:
+  app: oc-collector
+
+serviceSelectorLabels:
+  app: oc-collector
+
+deploymentMetadataLabels:
+  app: oc-collector
+
+# Volumes and Volume mounts
+volumeMounts:
+  - name: oc-collector-config-vol
+    mountPath: /conf
+
+volumes:
+  - configMap:
+      name: oc-collector-conf
+      items:
+        - key: oc-collector-config
+          path: oc-collector-config.yaml
+    name: oc-collector-config-vol
+
+# Node selector
+# If this does not work for localhost deployment add the "workload-general: enabled" label to the localhost k8s node.
+nodeSelector:
+  workload-general: enabled
+
+###########
+# Config Maps
+###########
+configMap:
+  name: oc-collector-conf
+  labels:
+    app: oc-collector
+  ocCollectorConfigFileName: "configs/oc-collector-config.yaml"
