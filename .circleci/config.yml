@@ -17,6 +17,10 @@ executors:
       auth:
         username: $DOCKER_USERNAME
         password: $DOCKER_PASSWORD
+  deployer:
+    docker:
+    - image: circleci/openjdk:11-jdk
+    resource_class: small
 
 commands:
   setup_build_environment:
@@ -73,6 +77,14 @@ jobs:
         command: |
           helm package --version $(git describe --abbrev=0) --app-version $(git describe --abbrev=0) --set commitSha=$(git rev-parse HEAD) ./helm/
           helm push-artifactory $(awk '/name:/ {print $2}' ./helm/Chart.yaml)-$(git describe --abbrev=0).tgz https://traceableai.jfrog.io/traceableai/helm --username $DOCKER_USERNAME --password $DOCKER_PASSWORD --skip-reindex
+  deploy:
+    executor: deployer
+    steps:
+    - checkout
+    - run:
+        name: Deploy Published Helm Charts
+        command: |
+          curl -u "$CIRCLE_API_TOKEN:" -X POST --header "Content-Type: application/json" -d "{\"branch\": \"develop\", \"parameters\": {\"deploy-service\": true,\"chart-name\": \"$(awk '/name:/ {print $2}' ./helm/Chart.yaml)\",\"chart-version\":\"$(git describe --abbrev=0)\"}}" https://circleci.com/api/v2/project/github/Traceableai/e2e-setup/pipeline
 
 workflows:
   version: 2
@@ -99,3 +111,11 @@ workflows:
             branches:
               only:
               - master
+      - deploy:
+         context: continuous_deployment
+         requires:
+         - package-charts
+         filters:
+           branches:
+             only:
+             - master
