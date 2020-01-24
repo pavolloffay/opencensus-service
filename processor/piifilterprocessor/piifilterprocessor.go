@@ -20,7 +20,7 @@ import (
 
 const (
 	redactedText = "***"
-	dlpTag       = "dlp"
+	dlpTag       = "traceable.filter.dlp"
 )
 
 // PiiFilter identifies configuration for PII filtering
@@ -398,7 +398,7 @@ func (pfp *piifilterprocessor) addDlpAttribute(span *tracepb.Span, dlpElements *
 		return
 	}
 
-	pfp.logger.Debug("DLP tag value", zap.String("dlp", dlpAttrVal))
+	pfp.logger.Debug("DLP tag value", zap.String(dlpTag, dlpAttrVal))
 
 	pbAttrib := &tracepb.AttributeValue{}
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: dlpAttrVal}}
