@@ -43,6 +43,8 @@ import (
 	compressiongrpc "github.com/census-instrumentation/opencensus-service/internal/compression/grpc"
 )
 
+const tokenEnvVarKey = "TRACEABLEAI_TOKEN"
+
 // keepaliveConfig exposes the keepalive.ClientParameters to be used by the exporter.
 // Refer to the original data-structure for the meaning of each parameter.
 type keepaliveConfig struct {
@@ -205,7 +207,7 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 	}
 
 	oce.iamEndpoint = ocac.IamEndpoint
-	oce.token = ocac.Token
+	oce.token = getToken(ocac)
 	oce.opts = opts
 	oce.headers = &ocac.Headers
 
@@ -215,6 +217,21 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 	// TODO: (@odeke-em, @songya23) implement ExportMetrics for OpenCensus.
 	// mps = append(mps, oexp)
 	return
+}
+
+func getToken(ocac cfg.OpenCensus) string {
+	token := ocac.Token
+	if len(token) > 0 {
+		return token
+	}
+
+	// check if the token is specified as an env var
+	token = os.Getenv(tokenEnvVarKey)
+	if len(token) > 0 {
+		return token
+	}
+
+	return ""
 }
 
 func (oce *ocagentExporter) stop() error {
