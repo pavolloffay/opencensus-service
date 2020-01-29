@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -219,7 +220,7 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 	return
 }
 
-func getToken(ocac cfg.OpenCensus) string {
+func getToken(ocac *opencensusConfig) string {
 	token := ocac.Token
 	if len(token) > 0 {
 		return token
