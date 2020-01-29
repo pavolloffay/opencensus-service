@@ -12,10 +12,10 @@ buildscript {
     }
   }
   dependencies {
-    classpath("ai.traceable.gradle:traceable-bootstrap-settings-plugin:0.3.1")
-    classpath("ai.traceable.gradle:traceable-version-settings-plugin:0.3.1")
+    classpath("ai.traceable.gradle:traceable-bootstrap-settings-plugin:0.5.0")
+    classpath("ai.traceable.gradle:traceable-semantic-version-settings-plugin:0.5.0")
   }
 }
 
 apply(plugin = "ai.traceable.gradle.traceable-bootstrap-settings-plugin")
-apply(plugin = "ai.traceable.gradle.traceable-version-settings-plugin")
+apply(plugin = "ai.traceable.gradle.traceable-semantic-version")
