@@ -124,6 +124,7 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 		}
 	}
 
+	ocac.Token = getToken(ocac)
 	if len(ocac.Token) > 0 {
 		if ocac.Headers == nil {
 			ocac.Headers = make(map[string]string)
@@ -208,7 +209,7 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 	}
 
 	oce.iamEndpoint = ocac.IamEndpoint
-	oce.token = getToken(ocac)
+	oce.token = ocac.Token
 	oce.opts = opts
 	oce.headers = &ocac.Headers
 
