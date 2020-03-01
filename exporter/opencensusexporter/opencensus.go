@@ -16,12 +16,9 @@ package opencensusexporter
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -42,6 +39,8 @@ import (
 	"github.com/census-instrumentation/opencensus-service/internal"
 	"github.com/census-instrumentation/opencensus-service/internal/compression"
 	compressiongrpc "github.com/census-instrumentation/opencensus-service/internal/compression/grpc"
+
+	iam_v1 "github.com/Traceableai/iam/proto/v1"
 )
 
 const tokenEnvVarKey = "TRACEABLEAI_TOKEN"
@@ -311,32 +310,19 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 }
 
 func refreshJWT(iamEndpoint string, token string, headers *map[string]string) error {
-	params := url.Values{}
-	params.Add("refresh_token", token)
-	r, err := http.Get("https://" + iamEndpoint + "/refresh-agent-token?" + params.Encode())
+	cc, err := grpc.Dial(iamEndpoint, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	if err != nil {
 		return err
 	}
-	defer r.Body.Close()
+	c := iam_v1.NewIamServiceClient(cc)
 
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-
-	if r.StatusCode != 200 {
-		return fmt.Errorf("refresh-agent-token returned non 200 status code %d:%s ", r.StatusCode, string(bodyBytes))
-	}
-
-	type RefreshAgentTokenResp struct {
-		Jwt string `json:"jwt"`
-	}
-	var bodyJSON RefreshAgentTokenResp
-	err = json.Unmarshal(bodyBytes, &bodyJSON)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.RefreshAgentToken(ctx, &iam_v1.RefreshAgentTokenRequest{RefreshToken: token})
 	if err != nil {
 		return err
 	}
 
-	(*headers)["Authorization"] = "Bearer " + bodyJSON.Jwt
+	(*headers)["Authorization"] = "Bearer " + r.GetJwt()
 	return nil
 }
