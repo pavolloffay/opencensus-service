@@ -34,6 +34,9 @@ jobs:
     executor: golang_docker
     resource_class: large
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "f8:97:3f:f7:78:04:12:8c:16:01:c9:65:9b:db:62:91" # iam repo
       - setup_build_environment
       - run: sudo apt-get update && sudo apt-get install -y bzr
       - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
