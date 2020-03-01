@@ -11,7 +11,7 @@ require (
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/DataDog/opencensus-go-exporter-datadog v0.0.0-20181026070331-e7c4bd17b329
 	github.com/Shopify/sarama v1.19.0
-	github.com/Traceableai/iam v0.0.0-20200301175615-b5e24cc4b2ac
+	github.com/Traceableai/iam v0.0.0-20200301184440-cfe1c3c2bb43
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
