@@ -11,6 +11,7 @@ require (
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/DataDog/opencensus-go-exporter-datadog v0.0.0-20181026070331-e7c4bd17b329
 	github.com/Shopify/sarama v1.19.0
+	github.com/Traceableai/iam v0.0.0-20200229184902-d2aea159bce0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
@@ -20,21 +21,20 @@ require (
 	github.com/go-kit/kit v0.8.0
 	github.com/gogo/googleapis v1.2.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/go-cmp v0.3.1
 	github.com/gorilla/mux v1.6.2
-	github.com/grpc-ecosystem/grpc-gateway v1.9.4
+	github.com/grpc-ecosystem/grpc-gateway v1.13.0
 	github.com/honeycombio/opencensus-exporter v1.0.1
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jaegertracing/jaeger v1.9.0
-	github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3
+	github.com/json-iterator/go v1.1.7
 	github.com/omnition/scribe-go v0.0.0-20190131012523-9e3c68f31124
 	github.com/onsi/gomega v1.4.3
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/openzipkin/zipkin-go v0.1.6
 	github.com/orijtech/prometheus-go-metrics-exporter v0.0.3-0.20190313163149-b321c5297f60
 	github.com/philhofer/fwd v1.0.0 // indirect
-	github.com/pkg/errors v0.8.0
+	github.com/pkg/errors v0.8.1
 	github.com/prashantv/protectmem v0.0.0-20171002184600-e20412882b3a // indirect
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275
@@ -42,11 +42,11 @@ require (
 	github.com/prometheus/prometheus v0.0.0-20190131111325-62e591f928dd
 	github.com/rs/cors v1.6.0
 	github.com/soheilhy/cmux v0.1.4
-	github.com/spf13/cast v1.2.0
-	github.com/spf13/cobra v0.0.3
-	github.com/spf13/viper v1.2.1
+	github.com/spf13/cast v1.3.0
+	github.com/spf13/cobra v0.0.5
+	github.com/spf13/viper v1.3.2
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/uber-go/atomic v1.3.2 // indirect
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
@@ -56,15 +56,13 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.2
 	github.com/yancl/opencensus-go-exporter-kafka v0.0.0-20181029030031-9c471c1bfbeb
 	go.opencensus.io v0.22.0
-	go.uber.org/atomic v1.3.2 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
-	go.uber.org/zap v1.9.1
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	go.uber.org/zap v1.10.0
+	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	google.golang.org/api v0.7.0
-	google.golang.org/grpc v1.22.1
+	google.golang.org/grpc v1.27.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.7
 )
 
 replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
