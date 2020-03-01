@@ -36,6 +36,7 @@ jobs:
     steps:
       - setup_build_environment
       - run: sudo apt-get update && sudo apt-get install -y bzr
+      - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
       - run: make install-tools
       - run: make test
       - run: make collector
