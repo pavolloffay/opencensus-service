@@ -11,7 +11,7 @@ require (
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/DataDog/opencensus-go-exporter-datadog v0.0.0-20181026070331-e7c4bd17b329
 	github.com/Shopify/sarama v1.19.0
-	github.com/Traceableai/iam v0.0.0-20200229184902-d2aea159bce0
+	github.com/Traceableai/iam v0.0.0-20200301175615-b5e24cc4b2ac
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/antlr/antlr4 v0.0.0-20190518164840-edae2a1c9b4b
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
@@ -56,9 +56,10 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.2
 	github.com/yancl/opencensus-go-exporter-kafka v0.0.0-20181029030031-9c471c1bfbeb
 	go.opencensus.io v0.22.0
+	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
-	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
+	golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 	google.golang.org/api v0.7.0
 	google.golang.org/grpc v1.27.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1 // indirect
