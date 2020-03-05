@@ -45,11 +45,13 @@ spec:
     {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}/oc-collector:{{ .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - "/occollector_linux"
             - "--config=/conf/oc-collector-config.yaml"
+            - "--logging-exporter"
+            - "--log-level={{ .Values.logLevel }}"
           ports:
             - name: grpc-opencensus
               containerPort: {{ .Values.containerPort }}

@@ -5,6 +5,8 @@
 ###########
 # Deployment and Service
 ###########
+logLevel: DEBUG
+
 minReadySeconds: 5
 progressDeadlineSeconds: 120
 replicaCount: 1
