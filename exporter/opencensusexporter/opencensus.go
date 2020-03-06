@@ -130,7 +130,10 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 		}
 		err := refreshJWT(ocac.IamEndpoint, ocac.Token, &ocac.Headers)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, &ocTraceExporterError{
+				code: 0,
+				msg:  fmt.Sprintf("OpenCensus exporter could not refersh jwt: %v", err),
+			}
 		}
 	}
 
@@ -289,13 +292,18 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 			status, ok := status.FromError(err)
 			if ok && status.Code() == codes.Unauthenticated {
 				err := refreshJWT(oce.iamEndpoint, oce.token, oce.headers)
-				if err == nil {
-					oce.opts = append(oce.opts, ocagent.WithHeaders(*oce.headers))
-					updatedExporter, err := ocagent.NewExporter(oce.opts...)
-					if err == nil {
-						exporter.Stop()
-						exporter = updatedExporter
+				if err != nil {
+					return len(td.Spans), &ocTraceExporterError{
+						code: 0,
+						msg:  fmt.Sprintf("OpenCensus exporter could not refersh jwt: %v", err),
 					}
+				}
+
+				oce.opts = append(oce.opts, ocagent.WithHeaders(*oce.headers))
+				updatedExporter, err := ocagent.NewExporter(oce.opts...)
+				if err == nil {
+					exporter.Stop()
+					exporter = updatedExporter
 				}
 			}
 		}
@@ -310,13 +318,13 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 }
 
 func refreshJWT(iamEndpoint string, token string, headers *map[string]string) error {
-	cc, err := grpc.Dial(iamEndpoint, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+	cc, err := grpc.Dial(iamEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	if err != nil {
 		return err
 	}
 	c := iam_v1.NewIamServiceClient(cc)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	r, err := c.RefreshAgentToken(ctx, &iam_v1.RefreshAgentTokenRequest{RefreshToken: token})
 	if err != nil {
