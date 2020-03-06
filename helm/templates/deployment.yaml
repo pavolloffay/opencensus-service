@@ -50,6 +50,8 @@ spec:
           command:
             - "/occollector_linux"
             - "--config=/conf/oc-collector-config.yaml"
+            - "--logging-exporter"
+            - "--log-level={{ .Values.logLevel }}"
           ports:
             - name: grpc-opencensus
               containerPort: {{ .Values.containerPort }}
