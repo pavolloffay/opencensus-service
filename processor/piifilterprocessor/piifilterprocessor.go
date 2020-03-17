@@ -259,6 +259,9 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, dlpElements
 			case "json":
 				pfp.filterJson(span, elem.Key, attrib, dlpElements)
 				break
+			case "urlencoded":
+				pfp.filterUrlEncoded(span, elem.Key, attrib, dlpElements)
+				break
 			case "sql":
 				pfp.filterSql(span, elem.Key, attrib, dlpElements)
 				break
@@ -287,6 +290,22 @@ func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value 
 	}
 
 	if jsonChanged {
+		pfp.replaceValue(value, filter.FilteredText())
+	}
+}
+
+func (pfp *piifilterprocessor) filterUrlEncoded(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) {
+	urlEncodedString := value.GetStringValue().Value
+
+	filter := newURLEncodedFilter(pfp, pfp.logger)
+	parseFail, urlEncodedChanged := filter.Filter(urlEncodedString, key, dlpElements)
+
+	if parseFail {
+		pfp.logger.Info("Problem parsing form url encoded data. Falling back to value regex filtering", zap.String("urlEncoded", urlEncodedString))
+		pfp.filterValueRegexs(span, key, value, dlpElements)
+	}
+
+	if urlEncodedChanged {
 		pfp.replaceValue(value, filter.FilteredText())
 	}
 }
@@ -359,6 +378,8 @@ func (pfp *piifilterprocessor) getDataType(dataType string) string {
 	switch lcDataType {
 	case "json", "text/json", "text/x-json", "application/json":
 		lcDataType = "json"
+	case "application/x-www-form-urlencoded":
+		lcDataType = "urlencoded"
 	case "sql":
 		lcDataType = "sql"
 	default:
