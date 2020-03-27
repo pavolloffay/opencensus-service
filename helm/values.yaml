@@ -23,11 +23,13 @@ env:
   - name: GOGC
     value: "80"
 
-containerPort: 55678
+containerPortOpencensus: 55678
+containerPortJaeger: 14268
 namespace: traceable
 
 service:
-  port: 55678
+  portOpencensus: 55678
+  portHttpJaeger: 14268
   metadataLabels:
     app: oc-collector
 
