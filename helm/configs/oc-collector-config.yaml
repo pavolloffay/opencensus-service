@@ -6,6 +6,7 @@ receivers:
       server-parameters:
         max-connection-age: 120s
         max-connection-age-grace: 30s            
+  jaeger: {}
 exporters:
   kafka:
     brokers: ["bootstrap:9092"]

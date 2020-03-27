@@ -10,8 +10,11 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.service.portOpencensus }}
       protocol: TCP
       name: grpc-opencensus
+    - port: {{ .Values.service.portHttpJaeger }}
+      protocol: TCP
+      name: http-jaeger
   selector:
     {{- toYaml .Values.serviceSelectorLabels | nindent 4 }}
