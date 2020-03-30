@@ -61,6 +61,8 @@ func NewJaegerThriftTChannelSenderCfg() *JaegerThriftTChannelSenderCfg {
 type JaegerThriftHTTPSenderCfg struct {
 	CollectorEndpoint string            `mapstructure:"collector-endpoint"`
 	Timeout           time.Duration     `mapstructure:"timeout"`
+	IamEndpoint       string            `mapstructure:"iam-endpoint,omitempty"`
+	Token             string            `mapstructure:"token,omitempty"`
 	Headers           map[string]string `mapstructure:"headers"`
 }
 
