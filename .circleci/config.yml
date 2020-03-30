@@ -79,7 +79,7 @@ jobs:
         name: Package and Publish Helm Charts
         # Read the "name:" from Chart.yaml. The chart version is <chart-name>-<semver git tag>
         command: |
-          helm package --version $(git describe --abbrev=0) --app-version $(git describe --abbrev=0) --set commitSha=$(git rev-parse HEAD) ./helm/
+          helm package --version $(git describe --abbrev=0) --app-version $(git describe --abbrev=0) ./helm/
           helm push-artifactory $(awk '/name:/ {print $2}' ./helm/Chart.yaml)-$(git describe --abbrev=0).tgz https://traceableai.jfrog.io/traceableai/helm --username $DOCKER_USERNAME --password $DOCKER_PASSWORD --skip-reindex
   deploy:
     executor: deployer
