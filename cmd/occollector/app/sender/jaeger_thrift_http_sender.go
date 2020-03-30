@@ -28,6 +28,7 @@ import (
 
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
+	"github.com/census-instrumentation/opencensus-service/exporter/exporterhelper"
 	jaegertranslator "github.com/census-instrumentation/opencensus-service/translator/trace/jaeger"
 )
 
@@ -37,10 +38,12 @@ const defaultHTTPTimeout = time.Second * 5
 // JaegerThriftHTTPSender forwards spans encoded in the jaeger thrift
 // format to a http server
 type JaegerThriftHTTPSender struct {
-	url     string
-	headers map[string]string
-	client  *http.Client
-	logger  *zap.Logger
+	url         string
+	iamEndpoint string
+	token       string
+	headers     map[string]string
+	client      *http.Client
+	logger      *zap.Logger
 }
 
 var _ consumer.TraceConsumer = (*JaegerThriftHTTPSender)(nil)
@@ -66,21 +69,43 @@ func HTTPRoundTripper(transport http.RoundTripper) HTTPOption {
 //     http://hostname:14268/api/traces?format=jaeger.thrift
 func NewJaegerThriftHTTPSender(
 	url string,
+	iamEndpoint string,
+	token string,
 	headers map[string]string,
 	zlogger *zap.Logger,
 	options ...HTTPOption,
 ) *JaegerThriftHTTPSender {
+
+	token = getToken(token)
+	if len(token) > 0 {
+		err := exporterhelper.RefreshJWT(iamEndpoint, token, &headers)
+		if err != nil {
+			zlogger.Warn(fmt.Sprintf("Jaeger Thirft HTTP could not refersh jwt: %v", err))
+		}
+	}
+
 	s := &JaegerThriftHTTPSender{
-		url:     url,
-		headers: headers,
-		client:  &http.Client{Timeout: defaultHTTPTimeout},
-		logger:  zlogger,
+		url:         url,
+		iamEndpoint: iamEndpoint,
+		token:       token,
+		headers:     headers,
+		client:      &http.Client{Timeout: defaultHTTPTimeout},
+		logger:      zlogger,
 	}
 
 	for _, option := range options {
 		option(s)
 	}
 	return s
+}
+
+func getToken(token string) string {
+	if len(token) > 0 {
+		return token
+	}
+
+	// check if the token is specified as an env var
+	return exporterhelper.GetTokenFromEnv()
 }
 
 // ConsumeTraceData sends the received data to the configured Jaeger Thrift end-point.
@@ -109,6 +134,15 @@ func (s *JaegerThriftHTTPSender) ConsumeTraceData(ctx context.Context, td data.T
 	}
 	io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		err := exporterhelper.RefreshJWT(s.iamEndpoint, s.token, &s.headers)
+		if err != nil {
+			return fmt.Errorf("Jaeger Thirft HTTP could not refersh jwt: %v", err)
+		}
+		return s.ConsumeTraceData(ctx, td)
+	}
+
 	if resp.StatusCode >= http.StatusBadRequest {
 		return fmt.Errorf("Jaeger Thirft HTTP sender error: %d", resp.StatusCode)
 	}

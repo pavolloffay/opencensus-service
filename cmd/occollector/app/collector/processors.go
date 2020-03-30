@@ -89,6 +89,8 @@ func buildQueuedSpanProcessor(
 			zap.String("url", thriftHTTPSenderOpts.CollectorEndpoint))
 		spanSender = sender.NewJaegerThriftHTTPSender(
 			thriftHTTPSenderOpts.CollectorEndpoint,
+			thriftHTTPSenderOpts.IamEndpoint,
+			thriftHTTPSenderOpts.Token,
 			thriftHTTPSenderOpts.Headers,
 			logger,
 			sender.HTTPTimeout(thriftHTTPSenderOpts.Timeout),

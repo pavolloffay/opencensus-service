@@ -16,10 +16,8 @@ package opencensusexporter
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -39,11 +37,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/internal"
 	"github.com/census-instrumentation/opencensus-service/internal/compression"
 	compressiongrpc "github.com/census-instrumentation/opencensus-service/internal/compression/grpc"
-
-	iam_v1 "github.com/Traceableai/iam/proto/v1"
 )
-
-const tokenEnvVarKey = "TRACEABLEAI_TOKEN"
 
 // keepaliveConfig exposes the keepalive.ClientParameters to be used by the exporter.
 // Refer to the original data-structure for the meaning of each parameter.
@@ -125,10 +119,7 @@ func OpenCensusTraceExportersFromViper(v *viper.Viper) (tps []consumer.TraceCons
 
 	ocac.Token = getToken(ocac)
 	if len(ocac.Token) > 0 {
-		if ocac.Headers == nil {
-			ocac.Headers = make(map[string]string)
-		}
-		err := refreshJWT(ocac.IamEndpoint, ocac.Token, &ocac.Headers)
+		err := exporterhelper.RefreshJWT(ocac.IamEndpoint, ocac.Token, &ocac.Headers)
 		if err != nil {
 			return nil, nil, nil, &ocTraceExporterError{
 				code: 0,
@@ -230,12 +221,7 @@ func getToken(ocac *opencensusConfig) string {
 	}
 
 	// check if the token is specified as an env var
-	token = os.Getenv(tokenEnvVarKey)
-	if len(token) > 0 {
-		return token
-	}
-
-	return ""
+	return exporterhelper.GetTokenFromEnv()
 }
 
 func (oce *ocagentExporter) stop() error {
@@ -291,7 +277,7 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 		if len(oce.token) > 0 {
 			status, ok := status.FromError(err)
 			if ok && status.Code() == codes.Unauthenticated {
-				err := refreshJWT(oce.iamEndpoint, oce.token, oce.headers)
+				err := exporterhelper.RefreshJWT(oce.iamEndpoint, oce.token, oce.headers)
 				if err != nil {
 					return len(td.Spans), &ocTraceExporterError{
 						code: 0,
@@ -304,7 +290,11 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 				if err == nil {
 					exporter.Stop()
 					exporter = updatedExporter
+					oce.exporters <- exporter
 				}
+				// now the jwt has been refreshed, re-try
+				// pushing the data
+				return oce.PushTraceData(ctx, td)
 			}
 		}
 	}
@@ -315,22 +305,4 @@ func (oce *ocagentExporter) PushTraceData(ctx context.Context, td data.TraceData
 	}
 
 	return 0, nil
-}
-
-func refreshJWT(iamEndpoint string, token string, headers *map[string]string) error {
-	cc, err := grpc.Dial(iamEndpoint, grpc.WithBlock(), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
-	if err != nil {
-		return err
-	}
-	c := iam_v1.NewIamServiceClient(cc)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	r, err := c.RefreshAgentToken(ctx, &iam_v1.RefreshAgentTokenRequest{RefreshToken: token})
-	if err != nil {
-		return err
-	}
-
-	(*headers)["Authorization"] = "Bearer " + r.GetJwt()
-	return nil
 }
