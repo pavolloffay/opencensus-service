@@ -2,9 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Chart.Name }}
-  # TODO: In helm2 you could specify the namespace while running helm install. In helm3, there's a bug that takes away
-  # this capability. It will be fixed in helm 3.1
-  namespace: {{ .Values.namespace }}
   annotations:
     # This annotation distinguishes this deployment from those done with skaffold in order to remove those ones before
     # deploying this one.

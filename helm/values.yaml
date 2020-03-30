@@ -25,9 +25,9 @@ env:
 
 containerPortOpencensus: 55678
 containerPortJaeger: 14268
-namespace: traceable
 
 service:
+  type: ClusterIP
   portOpencensus: 55678
   portHttpJaeger: 14268
   metadataLabels:
@@ -88,4 +88,5 @@ configMap:
   name: oc-collector-conf
   labels:
     app: oc-collector
-  ocCollectorConfigFileName: "configs/oc-collector-config.yaml"
+  logLevel: INFO
+  exporterKafkaTopic: jaeger-spans

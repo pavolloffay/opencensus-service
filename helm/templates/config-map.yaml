@@ -2,11 +2,23 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.configMap.name }}
-  # TODO: In helm2 you could specify the namespace while running helm install. In helm3, there's a bug that takes away
-  # this capability. It will be fixed in helm 3.1
-  namespace: {{ .Values.namespace }}
   labels:
     {{- toYaml .Values.configMap.labels | nindent 4 }}
 data:
-  oc-collector-config: |
-    {{ .Files.Get .Values.configMap.ocCollectorConfigFileName | nindent 4 }}
+  oc-collector-config: |-
+    log-level: {{ .Values.configMap.logLevel }}
+    receivers:
+      opencensus:
+        # keepalive settings can help load balancing, see receiver/README.md for more info.
+        keepalive:
+          server-parameters:
+            max-connection-age: 120s
+            max-connection-age-grace: 30s            
+      jaeger: {}
+    exporters:
+      kafka:
+        brokers: ["bootstrap:9092"]
+        topic: "{{ .Values.configMap.exporterKafkaTopic }}"
+    global:
+      attributes:
+        customerid-reader-enabled: true

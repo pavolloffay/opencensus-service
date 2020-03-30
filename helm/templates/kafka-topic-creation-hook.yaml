@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jaeger-spans-kafka-topic-creator
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+spec:
+  # Cancel job if it has not finished after 3 minutes
+  activeDeadlineSeconds: 180
+  # Keep the job's pod around for 15 minutes. This will be better once we implement pod crashes and errors
+  # monitoring.
+  ttlSecondsAfterFinished: 900
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      restartPolicy: OnFailure
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: create-jaeger-spans-kafka-topic
+          image: solsson/kafka:2.1.0@sha256:ac3f06d87d45c7be727863f31e79fbfdcb9c610b51ba9cf03c75a95d602f15e1
+          command: ["bin/kafka-topics.sh", "--create", "--zookeeper", "zookeeper:2181", "--replication-factor", "2", "--partitions", "2", "--topic", "{{ .Values.configMap.exporterKafkaTopic }}", "--config", "retention.bytes=4294967296", "--config", "retention.ms=259200000", "--if-not-exists"]
+  backoffLimit: 100
