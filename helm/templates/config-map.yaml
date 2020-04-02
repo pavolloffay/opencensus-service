@@ -3,7 +3,8 @@ kind: ConfigMap
 metadata:
   name: {{ .Values.configMap.name }}
   labels:
-    {{- toYaml .Values.configMap.labels | nindent 4 }}
+    app: oc-collector
+    release: {{ .Release.Name }}
 data:
   oc-collector-config: |-
     log-level: {{ .Values.configMap.logLevel }}

@@ -30,8 +30,6 @@ service:
   type: ClusterIP
   portOpencensus: 55678
   portHttpJaeger: 14268
-  metadataLabels:
-    app: oc-collector
 
 resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -60,9 +58,6 @@ deploymentSelectorMatchLabels:
 serviceSelectorLabels:
   app: oc-collector
 
-deploymentMetadataLabels:
-  app: oc-collector
-
 # Volumes and Volume mounts
 volumeMounts:
   - name: oc-collector-config-vol
@@ -86,7 +81,5 @@ nodeSelector:
 ###########
 configMap:
   name: oc-collector-conf
-  labels:
-    app: oc-collector
   logLevel: INFO
   exporterKafkaTopic: jaeger-spans

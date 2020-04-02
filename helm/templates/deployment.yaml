@@ -7,7 +7,8 @@ metadata:
     # deploying this one.
     deployment.traceable.ai/tool: helm3
   labels:
-    {{- toYaml .Values.deploymentMetadataLabels | nindent 4 }}
+    app: oc-collector
+    release: {{ .Release.Name }}
 spec:
   minReadySeconds: {{ .Values.minReadySeconds }}
   progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}

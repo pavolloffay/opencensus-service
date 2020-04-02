@@ -2,6 +2,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: jaeger-spans-kafka-topic-creator
+  labels:
+    app: oc-collector
+    release: {{ .Release.Name }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
 spec:

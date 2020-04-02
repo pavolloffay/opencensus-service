@@ -13,7 +13,7 @@ executors:
       - image: circleci/golang:1.12
   helm:
     docker:
-    - image: $DOCKER_REGISTRY/ai.traceable.build/google-cloud-sdk-with-helm:0.1.3
+    - image: $DOCKER_REGISTRY/ai.traceable.build/helm-packager:0.1.0
       auth:
         username: $DOCKER_USERNAME
         password: $DOCKER_PASSWORD
@@ -70,7 +70,7 @@ jobs:
         name: Helm Charts Lint and Template Render
         command: |
           helm lint --strict ./helm/
-          helm template --dry-run ./helm/
+          helm template ./helm/
   package-charts:
     executor: helm
     steps:
