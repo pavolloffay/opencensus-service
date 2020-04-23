@@ -25,13 +25,13 @@ tasks.register<Copy>("copyDependencies") {
     relativePath = RelativePath(true, *relativePath.segments.drop(0).toTypedArray())
   }
   includeEmptyDirs = false
-  into("$projectDir/build-gradle")
+  into("$buildDir")
 }
 
 sourceSets {
   main {
     proto {
-      srcDir("build-gradle/")
+      srcDir("build/")
     }
   }
 }
