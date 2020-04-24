@@ -13,6 +13,8 @@ type urlEncodedFilter struct {
 	filteredText string
 }
 
+const urlAttributeStr = "http.url"
+
 func newURLEncodedFilter(pfp *piifilterprocessor, logger *zap.Logger) *urlEncodedFilter {
 	return &urlEncodedFilter{
 		pfp:    pfp,
@@ -27,9 +29,22 @@ func (f *urlEncodedFilter) Filter(input string, key string, dlpElements *list.Li
 		return false, false
 	}
 
-	params, err := url.ParseQuery(input)
+  var u *url.URL
+  var err error
+
+  rawString := input
+  isUrlAttribute := key == urlAttributeStr
+  if isUrlAttribute {
+    u, err = url.Parse(input)
+    if err != nil {
+      return false, false
+    }
+    rawString = u.RawQuery
+  }
+
+	params, err := url.ParseQuery(rawString)
 	if err != nil {
-		f.logger.Info("Problem parsing json", zap.Error(err), zap.String("urlEncoded", input))
+		f.logger.Info("Problem parsing urlencoded", zap.Error(err), zap.String("urlEncoded", input))
 		return true, false
 	}
 
@@ -54,7 +69,14 @@ func (f *urlEncodedFilter) Filter(input string, key string, dlpElements *list.Li
 	}
 
 	if filtered {
-		f.filteredText = v.Encode()
+    encoded := v.Encode()
+    if isUrlAttribute {
+      u.RawQuery = encoded
+      f.filteredText = u.String()
+    } else {
+      f.filteredText = encoded
+    }
+
 	} else {
 		f.filteredText = input
 	}
