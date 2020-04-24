@@ -24,3 +24,5 @@ coverage.txt
 coverage.html
 
 .gradle
+build/**
+generated/**
