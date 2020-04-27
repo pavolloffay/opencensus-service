@@ -1,12 +1,12 @@
 package piifilterprocessor
 
 import (
-  "container/list"
-  "strings"
-  "unicode"
+	"container/list"
+	"strings"
+	"unicode"
 
-  "github.com/antlr/antlr4/runtime/Go/antlr"
-  "go.uber.org/zap"
+	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"go.uber.org/zap"
 )
 
 type sqlFilter struct {
@@ -26,7 +26,7 @@ func NewSqlFilter(pfp *piifilterprocessor, logger *zap.Logger) *sqlFilter {
   }
 }
 
-func (f *sqlFilter) Filter(input string, key string, dlpElements *list.List) (bool, bool) {
+func (f *sqlFilter) Filter(input string, key string, filterData *FilterData) (bool, bool) {
   is := NewCaseChangingStream(antlr.NewInputStream(input), true)
   lexer := NewMySqlLexer(is)
 
@@ -57,7 +57,7 @@ func (f *sqlFilter) Filter(input string, key string, dlpElements *list.List) (bo
   f.filteredText = str.String()
 
   if redactedLiteral {
-    f.pfp.addDlpElementToList(dlpElements, key, "", SqlFilterDlpTag)
+    f.pfp.addDlpElementToList(filterData.DlpElements, key, "", SqlFilterDlpTag)
     f.categories.PushBack("")
   }
 

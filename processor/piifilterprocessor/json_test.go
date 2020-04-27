@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
 	"github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/assert"
@@ -65,8 +66,11 @@ func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr boo
 	pfp, _ := NewTraceProcessor(exportertest.NewNopTraceExporter(), config, logger)
 	filter := newJSONFilter(pfp.(*piifilterprocessor), logger)
 
-	dlpElems := list.New()
-	err, filtered := filter.Filter(input, "attrib_key", dlpElems)
+	filterData := &FilterData{
+    DlpElements: list.New(),
+    ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+  }
+	err, filtered := filter.Filter(input, "attrib_key", filterData)
 	assert.Equal(t, expectedErr, err)
 	assert.True(t, expectedFiltered, filtered)
 	gomega.Expect(expectedJSON).Should(gomega.MatchJSON(filter.FilteredText()))

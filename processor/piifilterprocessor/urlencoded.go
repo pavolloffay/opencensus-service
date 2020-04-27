@@ -1,7 +1,6 @@
 package piifilterprocessor
 
 import (
-	"container/list"
 	"net/url"
 
 	"go.uber.org/zap"
@@ -22,7 +21,7 @@ func newURLEncodedFilter(pfp *piifilterprocessor, logger *zap.Logger) *urlEncode
 	}
 }
 
-func (f *urlEncodedFilter) Filter(input string, key string, dlpElements *list.List) (bool, bool) {
+func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterData) (bool, bool) {
 	f.logger.Debug("Parsing url encoded data", zap.String("urlEncoded", input))
 
 	if len(input) == 0 {
@@ -52,12 +51,12 @@ func (f *urlEncodedFilter) Filter(input string, key string, dlpElements *list.Li
 	var filtered bool
 	for param, values := range params {
 		for _, value := range values {
-			matchedKey, redacted := f.pfp.filterKeyRegexs(param, key, value, param, dlpElements)
+			matchedKey, redacted := f.pfp.filterKeyRegexs(param, key, value, param, filterData)
 			if matchedKey {
 				v.Add(param, redacted)
 				filtered = true
 			} else {
-				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, key, param, dlpElements)
+				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, key, param, filterData)
 				if stringValueFiltered {
 					filtered = true
 					v.Add(param, redacted)

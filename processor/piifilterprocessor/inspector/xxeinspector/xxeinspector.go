@@ -23,9 +23,9 @@ func NewInspector(nextInspector inspector.Inspector, logger *zap.Logger) (inspec
   }, nil
 }
 
-func (xi *xxeinspector) Inspect(message *pb.ApiDefinitionInspection, key string, value string) error {
+func (xi *xxeinspector) Inspect(message *pb.ApiDefinitionInspection, key string, value string) (bool, error) {
   if message == nil {
-    return errors.New("message is nil.")
+    return false, errors.New("message is nil.")
   }
 
   if strings.Contains(value, xxeStr) {
@@ -38,12 +38,13 @@ func (xi *xxeinspector) Inspect(message *pb.ApiDefinitionInspection, key string,
       message.XxeAnomalies = make(map[string]*pb.XxeAnomaly)
     }
     message.XxeAnomalies[key] = xa
+    return true, nil
   } else if xi.nextInspector != nil {
     // Should this be else if?
     return xi.nextInspector.Inspect(message, key, value)
   }
 
-  return nil
+  return false, nil
 }
 
 var _ inspector.Inspector = (*xxeinspector)(nil)

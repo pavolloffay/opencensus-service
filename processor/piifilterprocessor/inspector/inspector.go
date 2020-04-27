@@ -5,5 +5,5 @@ import (
 )
 
 type Inspector interface {
-      Inspect(message *pb.ApiDefinitionInspection, key string, value string) error
+      Inspect(message *pb.ApiDefinitionInspection, key string, value string) (bool, error)
 }
