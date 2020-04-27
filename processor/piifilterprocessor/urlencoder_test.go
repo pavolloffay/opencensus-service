@@ -43,6 +43,39 @@ func Test_piifilterprocessor_urlencoded_FilterKey(t *testing.T) {
 	assert.Equal(t, filteredParams.Get("password"), "***")
 }
 
+func Test_piifilterprocessor_urlencoded_FilterKey_URL(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	logger := zap.New(zapcore.NewNopCore())
+	config := &PiiFilter{HashValue: false,
+		KeyRegExs: []PiiElement{
+			{
+				Regex:    "^password$",
+				Category: "sensitive",
+			},
+		},
+	}
+	pfp, _ := NewTraceProcessor(exportertest.NewNopTraceExporter(), config, logger)
+	filter := newURLEncodedFilter(pfp.(*piifilterprocessor), logger)
+
+  str := "http://traceshop.dev/login?username=george&password=washington"
+
+	dlpElems := list.New()
+	isErr, filtered := filter.Filter(str, "http.url", dlpElems)
+	assert.False(t, isErr)
+	assert.True(t, filtered)
+
+	filteredEncoded := filter.FilteredText()
+
+  u, err := url.Parse(filteredEncoded)
+  assert.True(t, (err == nil))
+
+	filteredParams, err := url.ParseQuery(u.RawQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, filteredParams.Get("username"), "george")
+	assert.Equal(t, filteredParams.Get("password"), "***")
+}
+
 func Test_piifilterprocessor_urlencoded_FilterValue(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
