@@ -1,4 +1,4 @@
-package piifilterprocessor
+package inspector
 
 import (
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"

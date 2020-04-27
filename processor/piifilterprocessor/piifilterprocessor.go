@@ -13,6 +13,8 @@ import (
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector/xxeinspector"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
@@ -75,6 +77,7 @@ type piifilterprocessor struct {
 	keyRegexs    map[*regexp.Regexp]PiiElement
 	valueRegexs  map[*regexp.Regexp]PiiElement
 	complexData  map[string]PiiComplexData
+  inspector    inspector.Inspector
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -115,6 +118,11 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
+  inspector, err := xxeinspector.NewInspector(nil, logger)
+  if err != nil {
+    return nil, err
+  }
+
 	return &piifilterprocessor{
 		nextConsumer: nextConsumer,
 		logger:       logger,
@@ -124,6 +132,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		keyRegexs:    keyRegexs,
 		valueRegexs:  valueRegexs,
 		complexData:  complexData,
+    inspector:    inspector,
 	}, nil
 }
 
