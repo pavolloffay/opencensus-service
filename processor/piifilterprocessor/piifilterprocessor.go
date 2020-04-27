@@ -25,10 +25,10 @@ import (
 )
 
 const (
-	redactedText = "***"
-	dlpTag       = "traceable.filter.dlp"
-	inspectorTag = "traceable.api_definition_inspection"
-  queryParamTag = "http.request.query.param"
+	redactedText  = "***"
+	dlpTag        = "traceable.filter.dlp"
+	inspectorTag  = "traceable.api_definition_inspection"
+	queryParamTag = "http.request.query.param"
 )
 
 // PiiFilter identifies configuration for PII filtering
@@ -75,9 +75,9 @@ type PiiFilter struct {
 }
 
 type FilterData struct {
-  DlpElements *list.List
-  ApiDefinitionInspection *pb.ApiDefinitionInspection
-  hasAnomalies bool
+	DlpElements             *list.List
+	ApiDefinitionInspection *pb.ApiDefinitionInspection
+	hasAnomalies            bool
 }
 
 type piifilterprocessor struct {
@@ -89,7 +89,7 @@ type piifilterprocessor struct {
 	keyRegexs    map[*regexp.Regexp]PiiElement
 	valueRegexs  map[*regexp.Regexp]PiiElement
 	complexData  map[string]PiiComplexData
-  inspector    inspector.Inspector
+	inspector    inspector.Inspector
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -130,10 +130,10 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-  inspector, err := xxeinspector.NewInspector(nil, logger)
-  if err != nil {
-    return nil, err
-  }
+	inspector, err := xxeinspector.NewInspector(nil, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	return &piifilterprocessor{
 		nextConsumer: nextConsumer,
@@ -144,7 +144,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		keyRegexs:    keyRegexs,
 		valueRegexs:  valueRegexs,
 		complexData:  complexData,
-    inspector:    inspector,
+		inspector:    inspector,
 	}, nil
 }
 
@@ -176,11 +176,11 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 			continue
 		}
 
-    filterData := &FilterData{
-      DlpElements: list.New(),
-      ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
-      hasAnomalies: false,
-    }
+		filterData := &FilterData{
+			DlpElements:             list.New(),
+			ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+			hasAnomalies:            false,
+		}
 		for key, value := range span.Attributes.AttributeMap {
 			if value.GetStringValue() == nil {
 				continue
@@ -226,24 +226,24 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
-      var inspectorKey string
+			var inspectorKey string
 
-      if strings.Contains(actualKey, "http.url") {
-        inspectorKey = queryParamTag
-      } else {
-        inspectorKey = actualKey
-      }
+			if strings.Contains(actualKey, "http.url") {
+				inspectorKey = queryParamTag
+			} else {
+				inspectorKey = actualKey
+			}
 
-      if (len(path) > 0) {
-        inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
-      }
+			if len(path) > 0 {
+				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
+			}
 
-      hasAnomalies, err := pfp.inspector.Inspect(filterData.ApiDefinitionInspection, inspectorKey, value)
-      if err != nil {
-        return false, ""
-      }
+			hasAnomalies, err := pfp.inspector.Inspect(filterData.ApiDefinitionInspection, inspectorKey, value)
+			if err != nil {
+				return false, ""
+			}
 
-      filterData.hasAnomalies = filterData.hasAnomalies || hasAnomalies
+			filterData.hasAnomalies = filterData.hasAnomalies || hasAnomalies
 
 			var redacted string
 			if *piiElem.Redact {
@@ -472,18 +472,17 @@ func (pfp *piifilterprocessor) addDlpAttribute(span *tracepb.Span, dlpElements *
 	span.GetAttributes().AttributeMap[dlpTag] = pbAttrib
 }
 
-
 func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, hasAnomalies bool, apiDefinitionInspection *pb.ApiDefinitionInspection) {
-  if !hasAnomalies {
-    return
-  }
+	if !hasAnomalies {
+		return
+	}
 
-  serialized, err := proto.Marshal(apiDefinitionInspection)
-  if err != nil {
+	serialized, err := proto.Marshal(apiDefinitionInspection)
+	if err != nil {
 		pfp.logger.Warn("Problem marshalling Inspector attr object.", zap.Error(err))
-    return
-  }
-  encoded := b64.StdEncoding.EncodeToString(serialized)
+		return
+	}
+	encoded := b64.StdEncoding.EncodeToString(serialized)
 
 	pfp.logger.Debug("Inspector tag value", zap.String(inspectorTag, encoded))
 

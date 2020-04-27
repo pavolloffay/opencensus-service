@@ -28,18 +28,18 @@ func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterDa
 		return false, false
 	}
 
-  var u *url.URL
-  var err error
+	var u *url.URL
+	var err error
 
-  rawString := input
-  isUrlAttribute := key == urlAttributeStr
-  if isUrlAttribute {
-    u, err = url.Parse(input)
-    if err != nil {
-      return false, false
-    }
-    rawString = u.RawQuery
-  }
+	rawString := input
+	isUrlAttribute := key == urlAttributeStr
+	if isUrlAttribute {
+		u, err = url.Parse(input)
+		if err != nil {
+			return false, false
+		}
+		rawString = u.RawQuery
+	}
 
 	params, err := url.ParseQuery(rawString)
 	if err != nil {
@@ -68,13 +68,13 @@ func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterDa
 	}
 
 	if filtered {
-    encoded := v.Encode()
-    if isUrlAttribute {
-      u.RawQuery = encoded
-      f.filteredText = u.String()
-    } else {
-      f.filteredText = encoded
-    }
+		encoded := v.Encode()
+		if isUrlAttribute {
+			u.RawQuery = encoded
+			f.filteredText = u.String()
+		} else {
+			f.filteredText = encoded
+		}
 
 	} else {
 		f.filteredText = input

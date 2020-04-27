@@ -67,9 +67,9 @@ func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr boo
 	filter := newJSONFilter(pfp.(*piifilterprocessor), logger)
 
 	filterData := &FilterData{
-    DlpElements: list.New(),
-    ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
-  }
+		DlpElements:             list.New(),
+		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+	}
 	err, filtered := filter.Filter(input, "attrib_key", filterData)
 	assert.Equal(t, expectedErr, err)
 	assert.True(t, expectedFiltered, filtered)
