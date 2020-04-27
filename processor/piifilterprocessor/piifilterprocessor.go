@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
@@ -23,6 +25,7 @@ import (
 const (
 	redactedText = "***"
 	dlpTag       = "traceable.filter.dlp"
+  queryParamTag = "http.request.query.param"
 )
 
 // PiiFilter identifies configuration for PII filtering
@@ -78,6 +81,7 @@ type piifilterprocessor struct {
 	valueRegexs  map[*regexp.Regexp]PiiElement
 	complexData  map[string]PiiComplexData
   inspector    inspector.Inspector
+  message      *pb.ApiDefinitionInspection
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -133,6 +137,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		valueRegexs:  valueRegexs,
 		complexData:  complexData,
     inspector:    inspector,
+    message:      &pb.ApiDefinitionInspection{},
 	}, nil
 }
 
@@ -208,6 +213,23 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, dlpElements *list.List) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
+      var inspectorKey string
+
+      if strings.Contains(actualKey, "http.url") {
+        inspectorKey = queryParamTag
+      } else {
+        inspectorKey = actualKey
+      }
+
+      if (len(path) > 0) {
+        inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
+      }
+
+      err := pfp.inspector.Inspect(pfp.message, inspectorKey, value)
+      if err != nil {
+        return false, ""
+      }
+
 			var redacted string
 			if *piiElem.Redact {
 				redacted = pfp.redactString(value)

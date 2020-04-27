@@ -52,12 +52,12 @@ func (f *urlEncodedFilter) Filter(input string, key string, dlpElements *list.Li
 	var filtered bool
 	for param, values := range params {
 		for _, value := range values {
-			matchedKey, redacted := f.pfp.filterKeyRegexs(param, param, value, "", dlpElements)
+			matchedKey, redacted := f.pfp.filterKeyRegexs(param, key, value, param, dlpElements)
 			if matchedKey {
 				v.Add(param, redacted)
 				filtered = true
 			} else {
-				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, param, "", dlpElements)
+				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, key, param, dlpElements)
 				if stringValueFiltered {
 					filtered = true
 					v.Add(param, redacted)
