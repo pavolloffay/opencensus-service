@@ -6,7 +6,7 @@ import (
 )
 
 type Inspector interface {
-	inspect(message *pb.ApiDefinitionInspection, key string, value string) (bool, error)
+	inspect(message *pb.ApiDefinitionInspection, key string, value string) bool
 }
 
 func InitializeInspectors(logger *zap.Logger) []Inspector {
@@ -18,7 +18,7 @@ func InitializeInspectors(logger *zap.Logger) []Inspector {
 
 func EvaluateInspectors(inspectors []Inspector, message *pb.ApiDefinitionInspection, key string, value string) {
 	for _, inspector := range inspectors {
-		hasAnomalies, _ := inspector.inspect(message, key, value)
+		hasAnomalies := inspector.inspect(message, key, value)
 		if hasAnomalies {
 			break
 		}

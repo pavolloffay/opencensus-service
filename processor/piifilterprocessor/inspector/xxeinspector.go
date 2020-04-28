@@ -1,7 +1,6 @@
 package inspector
 
 import (
-	"errors"
 	"strings"
 
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
@@ -21,9 +20,10 @@ func newXXEInspector(logger *zap.Logger) (Inspector, error) {
 	}, nil
 }
 
-func (xi *xxeinspector) inspect(message *pb.ApiDefinitionInspection, key string, value string) (bool, error) {
+func (xi *xxeinspector) inspect(message *pb.ApiDefinitionInspection, key string, value string) bool {
 	if message == nil {
-		return false, errors.New("message is nil.")
+		xi.logger.Warn("Message is nil")
+		return false
 	}
 
 	if strings.Contains(value, xxeStr) {
@@ -36,10 +36,10 @@ func (xi *xxeinspector) inspect(message *pb.ApiDefinitionInspection, key string,
 			message.XxeAnomalies = make(map[string]*pb.XxeAnomaly)
 		}
 		message.XxeAnomalies[key] = xa
-		return true, nil
+		return true
 	}
 
-	return false, nil
+	return false
 }
 
 var _ Inspector = (*xxeinspector)(nil)
