@@ -99,8 +99,12 @@ workflows:
   version: 2
   build-and-publish:
     jobs:
+      - protogen:
+          context: ci-credentials
       - build:
           context: ci-credentials
+          requires:
+            - protogen
       - validate-charts:
           context: continuous_deployment
       - publish:
