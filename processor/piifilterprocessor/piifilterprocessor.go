@@ -80,15 +80,15 @@ type FilterData struct {
 }
 
 type piifilterprocessor struct {
-	nextConsumer consumer.TraceConsumer
-	logger       *zap.Logger
-	hasFilters   bool
-	hashValue    bool
-	prefixes     []string
-	keyRegexs    map[*regexp.Regexp]PiiElement
-	valueRegexs  map[*regexp.Regexp]PiiElement
-	complexData  map[string]PiiComplexData
-	inspectors   []inspector.Inspector
+	nextConsumer     consumer.TraceConsumer
+	logger           *zap.Logger
+	hasFilters       bool
+	hashValue        bool
+	prefixes         []string
+	keyRegexs        map[*regexp.Regexp]PiiElement
+	valueRegexs      map[*regexp.Regexp]PiiElement
+	complexData      map[string]PiiComplexData
+	inspectorManager *inspector.InspectorManager
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -129,18 +129,18 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-	inspectors := inspector.InitializeInspectors(logger)
+	inspectorManager := inspector.NewInspectorManager(logger)
 
 	return &piifilterprocessor{
-		nextConsumer: nextConsumer,
-		logger:       logger,
-		hasFilters:   hasFilters,
-		hashValue:    filter.HashValue,
-		prefixes:     prefixes,
-		keyRegexs:    keyRegexs,
-		valueRegexs:  valueRegexs,
-		complexData:  complexData,
-		inspectors:   inspectors,
+		nextConsumer:     nextConsumer,
+		logger:           logger,
+		hasFilters:       hasFilters,
+		hashValue:        filter.HashValue,
+		prefixes:         prefixes,
+		keyRegexs:        keyRegexs,
+		valueRegexs:      valueRegexs,
+		complexData:      complexData,
+		inspectorManager: inspectorManager,
 	}, nil
 }
 
@@ -234,7 +234,7 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
 			}
 
-			inspector.EvaluateInspectors(pfp.inspectors, filterData.ApiDefinitionInspection, inspectorKey, value)
+			pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value)
 
 			var redacted string
 			if *piiElem.Redact {

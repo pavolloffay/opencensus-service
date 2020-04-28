@@ -5,21 +5,41 @@ import (
 	"go.uber.org/zap"
 )
 
-type Inspector interface {
+type inspector interface {
 	inspect(message *pb.ApiDefinitionInspection, key string, value string) bool
 }
 
-func InitializeInspectors(logger *zap.Logger) []Inspector {
-	var inspectors []Inspector
-	inspector, _ := newXXEInspector(logger)
-	inspectors = append(inspectors, inspector)
-	return inspectors
-}
-
-func EvaluateInspectors(inspectors []Inspector, message *pb.ApiDefinitionInspection, key string, value string) {
+func EvaluateInspectors(inspectors []inspector, message *pb.ApiDefinitionInspection, key string, value string) {
 	for _, inspector := range inspectors {
 		hasAnomalies := inspector.inspect(message, key, value)
 		if hasAnomalies {
+			break
+		}
+	}
+	return
+}
+
+type InspectorManager struct {
+	logger     *zap.Logger
+	inspectors []inspector
+}
+
+func NewInspectorManager(logger *zap.Logger) *InspectorManager {
+	var inspectors []inspector
+	inspector, _ := newXXEInspector(logger)
+	inspectors = append(inspectors, inspector)
+
+	return &InspectorManager{
+		logger:     logger,
+		inspectors: inspectors,
+	}
+}
+
+func (im *InspectorManager) EvaluateInspectors(message *pb.ApiDefinitionInspection, key string, value string) {
+	for _, inspector := range im.inspectors {
+		hasAnomalies := inspector.inspect(message, key, value)
+		if hasAnomalies {
+			im.logger.Debug("Found Anomaly. Breaking from the loop.")
 			break
 		}
 	}

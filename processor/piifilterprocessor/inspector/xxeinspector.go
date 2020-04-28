@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
-	// "github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +13,7 @@ type xxeinspector struct {
 
 const xxeStr = "<!ENTITY"
 
-func newXXEInspector(logger *zap.Logger) (Inspector, error) {
+func newXXEInspector(logger *zap.Logger) (inspector, error) {
 	return &xxeinspector{
 		logger: logger,
 	}, nil
@@ -42,4 +41,4 @@ func (xi *xxeinspector) inspect(message *pb.ApiDefinitionInspection, key string,
 	return false
 }
 
-var _ Inspector = (*xxeinspector)(nil)
+var _ inspector = (*xxeinspector)(nil)
