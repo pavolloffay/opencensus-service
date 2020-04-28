@@ -162,6 +162,16 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 	return regexps, nil
 }
 
+func mapRawTagsToEnriched(rawTag string) string {
+	var enrichedTag string
+	if strings.Contains(rawTag, "http.url") {
+		enrichedTag = queryParamTag
+	} else {
+		enrichedTag = rawTag
+	}
+	return enrichedTag
+}
+
 func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !pfp.hasFilters {
 		return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -222,13 +232,7 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
-			var inspectorKey string
-
-			if strings.Contains(actualKey, "http.url") {
-				inspectorKey = queryParamTag
-			} else {
-				inspectorKey = actualKey
-			}
+			inspectorKey := mapRawTagsToEnriched(actualKey)
 
 			if len(path) > 0 {
 				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
@@ -243,6 +247,7 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 				// Dont redact. Just use the same value.
 				redacted = value
 			}
+			// TODO: Move actual key to enriched key when restructuring dlp.
 			pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
 			return true, redacted
 		}
