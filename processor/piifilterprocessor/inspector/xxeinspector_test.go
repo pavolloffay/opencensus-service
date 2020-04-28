@@ -1,4 +1,4 @@
-package xxeinspector
+package inspector
 
 import (
 	"testing"

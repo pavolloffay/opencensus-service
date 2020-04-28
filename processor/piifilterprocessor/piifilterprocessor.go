@@ -18,7 +18,6 @@ import (
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
-	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector/xxeinspector"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
@@ -27,7 +26,7 @@ import (
 const (
 	redactedText  = "***"
 	dlpTag        = "traceable.filter.dlp"
-	inspectorTag  = "traceable.api_definition_inspection"
+	inspectorTag  = "traceable.apidefinition.inspection"
 	queryParamTag = "http.request.query.param"
 )
 
@@ -130,7 +129,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-	inspector, err := xxeinspector.NewInspector(nil, logger)
+	inspector, err := inspector.NewInspector(nil, logger)
 	if err != nil {
 		return nil, err
 	}
