@@ -88,7 +88,7 @@ type piifilterprocessor struct {
 	keyRegexs    map[*regexp.Regexp]PiiElement
 	valueRegexs  map[*regexp.Regexp]PiiElement
 	complexData  map[string]PiiComplexData
-	inspector    inspector.Inspector
+	inspectors   []inspector.Inspector
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -129,10 +129,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-	inspector, err := inspector.NewInspector(nil, logger)
-	if err != nil {
-		return nil, err
-	}
+	inspectors := inspector.InitializeInspectors(logger)
 
 	return &piifilterprocessor{
 		nextConsumer: nextConsumer,
@@ -143,7 +140,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		keyRegexs:    keyRegexs,
 		valueRegexs:  valueRegexs,
 		complexData:  complexData,
-		inspector:    inspector,
+		inspectors:   inspectors,
 	}, nil
 }
 
@@ -237,12 +234,7 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
 			}
 
-			hasAnomalies, err := pfp.inspector.Inspect(filterData.ApiDefinitionInspection, inspectorKey, value)
-			if err != nil {
-				return false, ""
-			}
-
-			filterData.hasAnomalies = filterData.hasAnomalies || hasAnomalies
+			inspector.EvaluateInspectors(pfp.inspectors, filterData.ApiDefinitionInspection, inspectorKey, value)
 
 			var redacted string
 			if *piiElem.Redact {
