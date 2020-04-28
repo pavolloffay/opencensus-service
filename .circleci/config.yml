@@ -26,6 +26,18 @@ commands:
           at: *workspace_root
 
 jobs:
+  protogen:
+    executor: gradle_docker
+    steps:
+      - setup_build_environment
+      - setup_remote_docker
+      - run: ./gradlew copyDependencies generateProto
+      - run: cp -v -R generated /tmp/workspace/
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - generated/
+
   build:
     executor: golang_docker
     resource_class: large
@@ -36,6 +48,7 @@ jobs:
           fingerprints:
             - "f8:97:3f:f7:78:04:12:8c:16:01:c9:65:9b:db:62:91" # iam repo
       - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
+      - run: cp -v -R /tmp/workspace/generated ./
       - run: make install-tools
       - run: make test
       - run: make collector
