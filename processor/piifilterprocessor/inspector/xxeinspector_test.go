@@ -12,17 +12,19 @@ import (
 
 func Test_xxeinspector_xxeanomaly_exists(t *testing.T) {
 	logger := zap.New(zapcore.NewNopCore())
-	inspector, _ := newXXEInspector(logger)
+	inspector := newXXEInspector(logger)
 	message := &pb.ApiDefinitionInspection{}
 
 	inspector.inspect(message, "test.key", "<!ENTITY")
 
 	assert.True(t, (message.XxeAnomalies["test.key"] != nil))
+	assert.True(t, (message.XxeAnomalies["test.key"].Value == "<!ENTITY"))
+	assert.True(t, (message.XxeAnomalies["test.key"].ValueType == pb.ValueType_RAW))
 }
 
 func Test_xxeinspector_xxeanomaly_doesnt_exist(t *testing.T) {
 	logger := zap.New(zapcore.NewNopCore())
-	inspector, _ := newXXEInspector(logger)
+	inspector := newXXEInspector(logger)
 	message := &pb.ApiDefinitionInspection{}
 
 	inspector.inspect(message, "test.key", "34")

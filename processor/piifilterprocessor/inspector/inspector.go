@@ -16,7 +16,7 @@ type InspectorManager struct {
 
 func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	var inspectors []inspector
-	inspector, _ := newXXEInspector(logger)
+	inspector := newXXEInspector(logger)
 	inspectors = append(inspectors, inspector)
 
 	return &InspectorManager{

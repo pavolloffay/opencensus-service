@@ -13,10 +13,10 @@ type xxeinspector struct {
 
 const xxeStr = "<!ENTITY"
 
-func newXXEInspector(logger *zap.Logger) (inspector, error) {
+func newXXEInspector(logger *zap.Logger) inspector {
 	return &xxeinspector{
 		logger: logger,
-	}, nil
+	}
 }
 
 func (xi *xxeinspector) inspect(message *pb.ApiDefinitionInspection, key string, value string) bool {
