@@ -9,16 +9,6 @@ type inspector interface {
 	inspect(message *pb.ApiDefinitionInspection, key string, value string) bool
 }
 
-func EvaluateInspectors(inspectors []inspector, message *pb.ApiDefinitionInspection, key string, value string) {
-	for _, inspector := range inspectors {
-		hasAnomalies := inspector.inspect(message, key, value)
-		if hasAnomalies {
-			break
-		}
-	}
-	return
-}
-
 type InspectorManager struct {
 	logger     *zap.Logger
 	inspectors []inspector
