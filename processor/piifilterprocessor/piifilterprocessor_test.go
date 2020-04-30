@@ -47,30 +47,30 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{"password":"***"}
 	]}`)
 
-	jsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+	jsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
 
 	valueJsonInput := []byte(`{
-	"key_or_value":{  
+	"key_or_value":{
 		"a":"aaa",
 		"b":"key_or_value"
 		}
 	}`)
 
 	valueJsonExpected := []byte(`{
-	"key_or_value":{  
+	"key_or_value":{
 		"a":"aaa",
 		"b":"***"
 		}
 	}`)
 
-	valueJsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"$.key_or_value.b\",\"type\":\"pii\"}]"
+	valueJsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"key_or_value.b\",\"type\":\"pii\"}]"
 
 	multipleAttrsExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+		"{\"key\":\"custom.data\",\"path\":\"password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"custom.data\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
 
 	invalidJsonInput := []byte(`{
 	"key_or_value":{

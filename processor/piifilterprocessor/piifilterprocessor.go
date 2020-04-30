@@ -24,10 +24,12 @@ import (
 )
 
 const (
-	redactedText  = "***"
-	dlpTag        = "traceable.filter.dlp"
-	inspectorTag  = "traceable.apidefinition.inspection"
-	queryParamTag = "http.request.query.param"
+	redactedText              = "***"
+	dlpTag                    = "traceable.filter.dlp"
+	inspectorTag              = "traceable.apidefinition.inspection"
+	queryParamTag             = "http.request.query.param"
+	requestBodyEmptyJsonPath  = "REQUEST_BODY"
+	responseBodyEmptyJsonPath = "RESPONSE_BODY"
 )
 
 // PiiFilter identifies configuration for PII filtering
@@ -162,14 +164,22 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 	return regexps, nil
 }
 
-func mapRawTagsToEnriched(rawTag string) string {
-	var enrichedTag string
+func mapRawToEnriched(rawTag string, path string) (string, string) {
+	enrichedTag := rawTag
+	enrichedPath := path
 	if strings.Contains(rawTag, "http.url") {
 		enrichedTag = queryParamTag
-	} else {
-		enrichedTag = rawTag
+	} else if strings.Contains(rawTag, "http.request.body") {
+		if (len(path)) == 0 {
+			enrichedPath = requestBodyEmptyJsonPath
+		}
+	} else if strings.Contains(rawTag, "http.response.body") {
+		if (len(path)) == 0 {
+			enrichedPath = responseBodyEmptyJsonPath
+		}
 	}
-	return enrichedTag
+
+	return enrichedTag, enrichedPath
 }
 
 func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
@@ -229,27 +239,40 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 	return filtered
 }
 
+func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey string, path string) (bool, *PiiElement) {
+	for regexp, piiElem := range pfp.keyRegexs {
+		if regexp.MatchString(keyToMatch) {
+			return true, &piiElem
+		}
+	}
+	return false, nil
+}
+
+func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
+	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
+
+	if len(path) > 0 {
+		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
+	}
+
+	filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
+
+	var redacted string
+	if *piiElem.Redact {
+		redacted = pfp.redactString(value)
+	} else {
+		// Dont redact. Just use the same value.
+		redacted = value
+	}
+	// TODO: Move actual key to enriched key when restructuring dlp.
+	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
+	return true, redacted
+}
+
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
-			inspectorKey := mapRawTagsToEnriched(actualKey)
-
-			if len(path) > 0 {
-				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
-			}
-
-			filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
-
-			var redacted string
-			if *piiElem.Redact {
-				redacted = pfp.redactString(value)
-			} else {
-				// Dont redact. Just use the same value.
-				redacted = value
-			}
-			// TODO: Move actual key to enriched key when restructuring dlp.
-			pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
-			return true, redacted
+			return pfp.filterMatchedKey(&piiElem, keyToMatch, actualKey, value, path, filterData)
 		}
 	}
 
