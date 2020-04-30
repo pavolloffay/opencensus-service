@@ -1,7 +1,6 @@
 package piifilterprocessor
 
 import (
-	"container/list"
 	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
@@ -24,7 +23,7 @@ func newJSONFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	}
 }
 
-func (f *jsonFilter) Filter(input string, key string, dlpElements *list.List) (bool, bool) {
+func (f *jsonFilter) Filter(input string, key string, filterData *FilterData) (bool, bool) {
 	f.logger.Debug("Parsing json", zap.String("json", input))
 
 	if len(input) == 0 {
@@ -37,7 +36,7 @@ func (f *jsonFilter) Filter(input string, key string, dlpElements *list.List) (b
 		return true, false
 	}
 
-	filtered := f.filterJSON(f.json, key, jsonPathPrefix, dlpElements)
+	filtered := f.filterJSON(f.json, key, jsonPathPrefix, filterData)
 
 	return false, filtered
 }
@@ -54,23 +53,23 @@ func (f *jsonFilter) FilteredText() string {
 	return f.filteredText
 }
 
-func (f *jsonFilter) filterJSON(t interface{}, key string, jsonPath string, dlpElements *list.List) bool {
+func (f *jsonFilter) filterJSON(t interface{}, key string, jsonPath string, filterData *FilterData) bool {
 	filtered := false
 	switch tt := t.(type) {
 	case []interface{}:
-		filtered = f.filterJSONArray(tt, key, jsonPath, dlpElements)
+		filtered = f.filterJSONArray(tt, key, jsonPath, filterData)
 	case map[string]interface{}:
-		filtered = f.filterJSONMap(tt, key, jsonPath, dlpElements)
+		filtered = f.filterJSONMap(tt, key, jsonPath, filterData)
 	}
 
 	return filtered
 }
 
-func (f *jsonFilter) filterJSONArray(t []interface{}, key string, jsonPath string, dlpElements *list.List) bool {
+func (f *jsonFilter) filterJSONArray(t []interface{}, key string, jsonPath string, filterData *FilterData) bool {
 	filtered := false
 	for i, v := range t {
 		arrJSONPath := fmt.Sprintf("%s[%d]", jsonPath, i)
-		if f.filterJSON(v, key, arrJSONPath, dlpElements) {
+		if f.filterJSON(v, key, arrJSONPath, filterData) {
 			filtered = true
 		}
 	}
@@ -78,27 +77,27 @@ func (f *jsonFilter) filterJSONArray(t []interface{}, key string, jsonPath strin
 	return filtered
 }
 
-func (f *jsonFilter) filterJSONMap(t map[string]interface{}, key string, jsonPath string, dlpElements *list.List) bool {
+func (f *jsonFilter) filterJSONMap(t map[string]interface{}, key string, jsonPath string, filterData *FilterData) bool {
 	filtered := false
 	for k, v := range t {
 		kJSONPath := jsonPath + "." + k
 
 		switch vv := v.(type) {
 		case string:
-			matchedKey, redacted := f.pfp.filterKeyRegexs(k, key, vv, kJSONPath, dlpElements)
+			matchedKey, redacted := f.pfp.filterKeyRegexs(k, key, vv, kJSONPath, filterData)
 			if matchedKey {
 				t[k] = redacted
 				filtered = true
 			}
 			if !matchedKey {
-				vvFiltered, stringValueFiltered := f.pfp.filterStringValueRegexs(vv, key, kJSONPath, dlpElements)
+				vvFiltered, stringValueFiltered := f.pfp.filterStringValueRegexs(vv, key, kJSONPath, filterData)
 				if stringValueFiltered {
 					t[k] = vvFiltered
 					filtered = true
 				}
 			}
 		default:
-			if f.filterJSON(v, key, kJSONPath, dlpElements) {
+			if f.filterJSON(v, key, kJSONPath, filterData) {
 				filtered = true
 			}
 		}

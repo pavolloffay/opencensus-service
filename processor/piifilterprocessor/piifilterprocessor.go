@@ -3,24 +3,31 @@ package piifilterprocessor
 import (
 	"container/list"
 	"context"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"mime"
 	"regexp"
 	"strings"
 
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	proto "github.com/golang/protobuf/proto"
+
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
 )
 
 const (
-	redactedText = "***"
-	dlpTag       = "traceable.filter.dlp"
+	redactedText  = "***"
+	dlpTag        = "traceable.filter.dlp"
+	inspectorTag  = "traceable.apidefinition.inspection"
+	queryParamTag = "http.request.query.param"
 )
 
 // PiiFilter identifies configuration for PII filtering
@@ -66,15 +73,22 @@ type PiiFilter struct {
 	ComplexData []PiiComplexData `mapstructure:"complex-data"`
 }
 
+type FilterData struct {
+	DlpElements             *list.List
+	ApiDefinitionInspection *pb.ApiDefinitionInspection
+	hasAnomalies            bool
+}
+
 type piifilterprocessor struct {
-	nextConsumer consumer.TraceConsumer
-	logger       *zap.Logger
-	hasFilters   bool
-	hashValue    bool
-	prefixes     []string
-	keyRegexs    map[*regexp.Regexp]PiiElement
-	valueRegexs  map[*regexp.Regexp]PiiElement
-	complexData  map[string]PiiComplexData
+	nextConsumer     consumer.TraceConsumer
+	logger           *zap.Logger
+	hasFilters       bool
+	hashValue        bool
+	prefixes         []string
+	keyRegexs        map[*regexp.Regexp]PiiElement
+	valueRegexs      map[*regexp.Regexp]PiiElement
+	complexData      map[string]PiiComplexData
+	inspectorManager *inspector.InspectorManager
 }
 
 var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
@@ -115,15 +129,18 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
+	inspectorManager := inspector.NewInspectorManager(logger)
+
 	return &piifilterprocessor{
-		nextConsumer: nextConsumer,
-		logger:       logger,
-		hasFilters:   hasFilters,
-		hashValue:    filter.HashValue,
-		prefixes:     prefixes,
-		keyRegexs:    keyRegexs,
-		valueRegexs:  valueRegexs,
-		complexData:  complexData,
+		nextConsumer:     nextConsumer,
+		logger:           logger,
+		hasFilters:       hasFilters,
+		hashValue:        filter.HashValue,
+		prefixes:         prefixes,
+		keyRegexs:        keyRegexs,
+		valueRegexs:      valueRegexs,
+		complexData:      complexData,
+		inspectorManager: inspectorManager,
 	}, nil
 }
 
@@ -145,6 +162,16 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 	return regexps, nil
 }
 
+func mapRawTagsToEnriched(rawTag string) string {
+	var enrichedTag string
+	if strings.Contains(rawTag, "http.url") {
+		enrichedTag = queryParamTag
+	} else {
+		enrichedTag = rawTag
+	}
+	return enrichedTag
+}
+
 func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !pfp.hasFilters {
 		return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -155,7 +182,11 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 			continue
 		}
 
-		dlpElements := list.New()
+		filterData := &FilterData{
+			DlpElements:             list.New(),
+			ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+			hasAnomalies:            false,
+		}
 		for key, value := range span.Attributes.AttributeMap {
 			if value.GetStringValue() == nil {
 				continue
@@ -165,30 +196,32 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 				// value filters on complex data are run as part of
 				// complex data filtering
 				continue
-			} else if pfp.filterKeyRegexsAndReplaceValue(span, key, value, dlpElements) {
+			} else if pfp.filterKeyRegexsAndReplaceValue(span, key, value, filterData) {
 				// the key regex filters the entire value, so no
 				// need to run the value filter
 				continue
 			}
 
-			pfp.filterValueRegexs(span, key, value, dlpElements)
+			pfp.filterValueRegexs(span, key, value, filterData)
 		}
 
 		// complex data filtering is always matched on entire key, not
 		// prefixes, so can look up attribute directly, rather than iterating
 		// over all keys looking for a match
-		pfp.filterComplexData(span, dlpElements)
+		pfp.filterComplexData(span, filterData)
 
-		pfp.addDlpAttribute(span, dlpElements)
+		pfp.addDlpAttribute(span, filterData.DlpElements)
+
+		pfp.addInspectorAttribute(span, filterData.hasAnomalies, filterData.ApiDefinitionInspection)
 	}
 
 	return pfp.nextConsumer.ConsumeTraceData(ctx, td)
 }
 
-func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) bool {
+func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) bool {
 	truncatedKey := pfp.getTruncatedKey(key)
 
-	filtered, redacted := pfp.filterKeyRegexs(truncatedKey, key, value.GetStringValue().Value, "", dlpElements)
+	filtered, redacted := pfp.filterKeyRegexs(truncatedKey, key, value.GetStringValue().Value, "", filterData)
 	if filtered {
 		pfp.replaceValue(value, redacted)
 	}
@@ -196,9 +229,17 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 	return filtered
 }
 
-func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, dlpElements *list.List) (bool, string) {
+func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
+			inspectorKey := mapRawTagsToEnriched(actualKey)
+
+			if len(path) > 0 {
+				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
+			}
+
+			filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
+
 			var redacted string
 			if *piiElem.Redact {
 				redacted = pfp.redactString(value)
@@ -206,7 +247,8 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 				// Dont redact. Just use the same value.
 				redacted = value
 			}
-			pfp.addDlpElementToList(dlpElements, actualKey, path, piiElem.Category)
+			// TODO: Move actual key to enriched key when restructuring dlp.
+			pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
 			return true, redacted
 		}
 	}
@@ -214,29 +256,29 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 	return false, ""
 }
 
-func (pfp *piifilterprocessor) filterValueRegexs(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) {
+func (pfp *piifilterprocessor) filterValueRegexs(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) {
 	valueString := value.GetStringValue().Value
 
-	valueString, filtered := pfp.filterStringValueRegexs(valueString, key, "", dlpElements)
+	valueString, filtered := pfp.filterStringValueRegexs(valueString, key, "", filterData)
 
 	if filtered {
 		pfp.replaceValue(value, valueString)
 	}
 }
 
-func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string, path string, dlpElements *list.List) (string, bool) {
+func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string, path string, filterData *FilterData) (string, bool) {
 	filtered := false
 	for regexp, piiElem := range pfp.valueRegexs {
 		filtered, value = pfp.replacingRegex(value, regexp, piiElem)
 		if filtered {
-			pfp.addDlpElementToList(dlpElements, key, path, piiElem.Category)
+			pfp.addDlpElementToList(filterData.DlpElements, key, path, piiElem.Category)
 		}
 	}
 
 	return value, filtered
 }
 
-func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, dlpElements *list.List) {
+func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, filterData *FilterData) {
 	attribMap := span.GetAttributes().AttributeMap
 	for _, elem := range pfp.complexData {
 		if attrib, ok := attribMap[elem.Key]; ok {
@@ -257,13 +299,13 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, dlpElements
 
 			switch dataType {
 			case "json":
-				pfp.filterJson(span, elem.Key, attrib, dlpElements)
+				pfp.filterJson(span, elem.Key, attrib, filterData)
 				break
 			case "urlencoded":
-				pfp.filterUrlEncoded(span, elem.Key, attrib, dlpElements)
+				pfp.filterUrlEncoded(span, elem.Key, attrib, filterData)
 				break
 			case "sql":
-				pfp.filterSql(span, elem.Key, attrib, dlpElements)
+				pfp.filterSql(span, elem.Key, attrib, filterData)
 				break
 			default: // ignore all other types
 				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
@@ -273,20 +315,20 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, dlpElements
 	}
 }
 
-func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) {
+func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) {
 	jsonString := value.GetStringValue().Value
 	// strip any leading/trailing quotes which may have been added to the value
 	jsonString = strings.TrimPrefix(jsonString, "\"")
 	jsonString = strings.TrimSuffix(jsonString, "\"")
 
 	filter := newJSONFilter(pfp, pfp.logger)
-	parseFail, jsonChanged := filter.Filter(jsonString, key, dlpElements)
+	parseFail, jsonChanged := filter.Filter(jsonString, key, filterData)
 
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
 		pfp.logger.Info("Problem parsing json. Falling back to value regex filtering", zap.String("json", jsonString))
-		pfp.filterValueRegexs(span, key, value, dlpElements)
+		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
 	if jsonChanged {
@@ -294,15 +336,15 @@ func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value 
 	}
 }
 
-func (pfp *piifilterprocessor) filterUrlEncoded(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) {
+func (pfp *piifilterprocessor) filterUrlEncoded(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) {
 	urlEncodedString := value.GetStringValue().Value
 
 	filter := newURLEncodedFilter(pfp, pfp.logger)
-	parseFail, urlEncodedChanged := filter.Filter(urlEncodedString, key, dlpElements)
+	parseFail, urlEncodedChanged := filter.Filter(urlEncodedString, key, filterData)
 
 	if parseFail {
 		pfp.logger.Info("Problem parsing form url encoded data. Falling back to value regex filtering", zap.String("urlEncoded", urlEncodedString))
-		pfp.filterValueRegexs(span, key, value, dlpElements)
+		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
 	if urlEncodedChanged {
@@ -310,17 +352,17 @@ func (pfp *piifilterprocessor) filterUrlEncoded(span *tracepb.Span, key string, 
 	}
 }
 
-func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *tracepb.AttributeValue, dlpElements *list.List) {
+func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) {
 	sqlString := value.GetStringValue().Value
 
 	filter := NewSqlFilter(pfp, pfp.logger)
-	parseFail, sqlChanged := filter.Filter(sqlString, key, dlpElements)
+	parseFail, sqlChanged := filter.Filter(sqlString, key, filterData)
 
 	// if sql is invalid, run the value filter on the sql string to try and
 	// filter out any keywords out of the string
 	if parseFail {
 		pfp.logger.Info("Problem parsing sql. Falling back to value regex filtering", zap.String("sql", sqlString))
-		pfp.filterValueRegexs(span, key, value, dlpElements)
+		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
 	if sqlChanged {
@@ -424,4 +466,21 @@ func (pfp *piifilterprocessor) addDlpAttribute(span *tracepb.Span, dlpElements *
 	pbAttrib := &tracepb.AttributeValue{}
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: dlpAttrVal}}
 	span.GetAttributes().AttributeMap[dlpTag] = pbAttrib
+}
+
+func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, hasAnomalies bool, apiDefinitionInspection *pb.ApiDefinitionInspection) {
+	if !hasAnomalies {
+		return
+	}
+
+	serialized, err := proto.Marshal(apiDefinitionInspection)
+	if err != nil {
+		pfp.logger.Warn("Problem marshalling Inspector attr object.", zap.Error(err))
+		return
+	}
+	encoded := b64.StdEncoding.EncodeToString(serialized)
+
+	pbAttrib := &tracepb.AttributeValue{}
+	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encoded}}
+	span.GetAttributes().AttributeMap[inspectorTag] = pbAttrib
 }
