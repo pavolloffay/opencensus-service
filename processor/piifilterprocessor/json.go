@@ -61,7 +61,7 @@ func (f *jsonFilter) filterJSON(t interface{}, piiElem *PiiElement, key string, 
 		filtered, redacted := f.filterJSONMap(tt, piiElem, key, actualKey, jsonPath, filterData)
 		return filtered, redacted
 	case interface{}:
-		filtered, redacted := f.filterJSONLeaf(tt, piiElem, key, actualKey, jsonPath, filterData)
+		filtered, redacted := f.filterJSONScalar(tt, piiElem, key, actualKey, jsonPath, filterData)
 		return filtered, redacted
 	}
 

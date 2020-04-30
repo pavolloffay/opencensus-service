@@ -24,10 +24,11 @@ import (
 )
 
 const (
-	redactedText              = "***"
-	dlpTag                    = "traceable.filter.dlp"
-	inspectorTag              = "traceable.apidefinition.inspection"
-	queryParamTag             = "http.request.query.param"
+	redactedText  = "***"
+	dlpTag        = "traceable.filter.dlp"
+	inspectorTag  = "traceable.apidefinition.inspection"
+	queryParamTag = "http.request.query.param"
+	// In case of empty json path, platform uses strings defined here as path
 	requestBodyEmptyJsonPath  = "REQUEST_BODY"
 	responseBodyEmptyJsonPath = "RESPONSE_BODY"
 )
@@ -172,14 +173,15 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 func mapRawToEnriched(rawTag string, path string) (string, string) {
 	enrichedTag := rawTag
 	enrichedPath := path
-	if strings.Contains(rawTag, "http.url") {
+	switch rawTag {
+	case "http.url":
 		enrichedTag = queryParamTag
-	} else if strings.Contains(rawTag, "http.request.body") {
-		if (len(path)) == 0 {
+	case "http.request.body":
+		if len(path) == 0 {
 			enrichedPath = requestBodyEmptyJsonPath
 		}
-	} else if strings.Contains(rawTag, "http.response.body") {
-		if (len(path)) == 0 {
+	case "http.response.body":
+		if len(path) == 0 {
 			enrichedPath = responseBodyEmptyJsonPath
 		}
 	}
