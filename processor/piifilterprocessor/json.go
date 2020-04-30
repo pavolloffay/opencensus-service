@@ -12,8 +12,6 @@ type jsonFilter struct {
 	filteredText string
 }
 
-// const jsonPathPrefix = "$"
-
 func newJSONFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	return &jsonFilter{
 		pfp:    pfp,
