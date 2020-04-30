@@ -1,6 +1,8 @@
 package piifilterprocessor
 
 import (
+	"fmt"
+
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
@@ -84,25 +86,6 @@ func (f *jsonFilter) filterJSONArray(t []interface{}, piiElem *PiiElement, key s
 	return filtered, t
 }
 
-func (f *jsonFilter) filterJSONLeaf(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
-	switch tt := t.(type) {
-	case string:
-		if piiElem != nil {
-			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, tt, jsonPath, filterData)
-			return true, redacted
-		}
-		matchedKey, redacted := f.pfp.filterKeyRegexs(key, actualKey, tt, jsonPath, filterData)
-		if matchedKey {
-			return true, redacted
-		}
-		vvFiltered, stringValueFiltered := f.pfp.filterStringValueRegexs(tt, actualKey, jsonPath, filterData)
-		if stringValueFiltered {
-			return true, vvFiltered
-		}
-	}
-	return false, t
-}
-
 func (f *jsonFilter) filterJSONMap(t map[string]interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
 	filtered := false
 	for k, v := range t {
@@ -125,4 +108,29 @@ func (f *jsonFilter) filterJSONMap(t map[string]interface{}, piiElem *PiiElement
 	}
 
 	return filtered, t
+}
+
+func (f *jsonFilter) filterJSONScalar(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
+	if piiElem == nil {
+		_, piiElem = f.pfp.matchKeyRegexs(key, actualKey, jsonPath)
+	}
+
+	switch tt := t.(type) {
+	case string:
+		if piiElem != nil {
+			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, tt, jsonPath, filterData)
+			return true, redacted
+		}
+		vvFiltered, stringValueFiltered := f.pfp.filterStringValueRegexs(tt, actualKey, jsonPath, filterData)
+		if stringValueFiltered {
+			return true, vvFiltered
+		}
+	case interface{}:
+		if piiElem != nil {
+			str := fmt.Sprintf("%v", tt)
+			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, str, jsonPath, filterData)
+			return true, redacted
+		}
+	}
+	return false, t
 }

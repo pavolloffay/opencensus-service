@@ -57,6 +57,12 @@ func Test_piifilterprocessor_json_ObjectInKeyFilter(t *testing.T) {
 	filterJSON(t, input, expected, false, true)
 }
 
+func Test_piifilterprocessor_json_NonStringScalarFilter(t *testing.T) {
+	input := "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34.1,true], \"key2\":false}}]}"
+	expected := "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}"
+	filterJSON(t, input, expected, false, true)
+}
+
 func Test_piifilterprocessor_json_SimpleArrayFilter(t *testing.T) {
 	input := "[\"12\",\"34\",\"56\"]"
 	expected := "[\"12\",\"34\",\"56\"]"
