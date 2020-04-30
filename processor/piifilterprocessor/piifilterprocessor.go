@@ -238,7 +238,7 @@ func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey stri
 				inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, path)
 			}
 
-			pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value)
+			filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
 
 			var redacted string
 			if *piiElem.Redact {

@@ -25,13 +25,14 @@ func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	}
 }
 
-func (im *InspectorManager) EvaluateInspectors(message *pb.ApiDefinitionInspection, key string, value string) {
+func (im *InspectorManager) EvaluateInspectors(message *pb.ApiDefinitionInspection, key string, value string) bool {
 	for _, inspector := range im.inspectors {
 		hasAnomalies := inspector.inspect(message, key, value)
 		if hasAnomalies {
 			im.logger.Debug("Found Anomaly. Breaking from the loop.")
+			return true
 			break
 		}
 	}
-	return
+	return false
 }
