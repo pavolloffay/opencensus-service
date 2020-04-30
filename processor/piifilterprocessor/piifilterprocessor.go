@@ -159,6 +159,10 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 			redact := true
 			elem.Redact = &redact
 		}
+		if elem.Fqn == nil {
+			fqn := false
+			elem.Fqn = &fqn
+		}
 		regexps[regexp] = elem
 	}
 
@@ -242,7 +246,7 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 
 func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey string, path string) (bool, *PiiElement) {
 	for regexp, piiElem := range pfp.keyRegexs {
-		if piiElem.Fqn {
+		if *piiElem.Fqn {
 			if regexp.MatchString(path) {
 				return true, &piiElem
 			}
