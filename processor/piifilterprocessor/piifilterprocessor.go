@@ -40,6 +40,7 @@ type PiiElement struct {
 	// Default is true and in case it's nil compileRegexes() function in this file
 	// will set it to a "true" pointer
 	Redact *bool `mapstructure:"redact,omitempty"`
+	Fqn    *bool `mapstructure:"fqn,omitempty"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -241,9 +242,16 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 
 func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey string, path string) (bool, *PiiElement) {
 	for regexp, piiElem := range pfp.keyRegexs {
-		if regexp.MatchString(keyToMatch) {
-			return true, &piiElem
+		if piiElem.Fqn {
+			if regexp.MatchString(path) {
+				return true, &piiElem
+			}
+		} else {
+			if regexp.MatchString(keyToMatch) {
+				return true, &piiElem
+			}
 		}
+
 	}
 	return false, nil
 }
