@@ -422,7 +422,7 @@ func (pfp *piifilterprocessor) filterCookie(span *tracepb.Span, key string, valu
 	filter := newCookieFilter(pfp, pfp.logger)
 	parseFail, cookieChanged := filter.Filter(cookieString, key, filterData)
 
-	// if cookie is invalid, run the value filter on the sql string to try and
+	// if cookie is invalid, run the value filter on the cookie string to try and
 	// filter out any keywords out of the string
 	if parseFail {
 		pfp.logger.Info("Problem parsing cookie. Falling back to value regex filtering", zap.String("cookie", cookieString))

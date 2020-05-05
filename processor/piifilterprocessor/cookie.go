@@ -20,16 +20,6 @@ func newCookieFilter(pfp *piifilterprocessor, logger *zap.Logger) *cookieFilter 
 	}
 }
 
-func mapKeyToHeader(key string) string {
-	switch key {
-	case "http.request.header.cookie":
-		return "Cookie"
-	case "http.response.header.set-cookie":
-		return "Set-Cookie"
-	}
-	return ""
-}
-
 func parseCookies(key string, value string) []*http.Cookie {
 	switch key {
 	case "http.request.header.cookie":
