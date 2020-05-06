@@ -21,7 +21,7 @@ type tenantidprocessor struct {
 }
 
 const (
-	tenantIDHTTPHeaderKey = "tenant-id"
+	tenantIDHTTPHeaderKey = "x-tenant-id"
 	tenantIDSpanTagKey    = "tenant-id"
 )
 

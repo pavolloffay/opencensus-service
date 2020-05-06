@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Traceableai/opencensus-service/processor/tenantidprocessor"
 	tchReporter "github.com/jaegertracing/jaeger/cmd/agent/app/reporter/tchannel"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -34,7 +35,6 @@ import (
 	"github.com/census-instrumentation/opencensus-service/internal/config"
 	"github.com/census-instrumentation/opencensus-service/processor/addattributesprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
-	"github.com/census-instrumentation/opencensus-service/processor/customeridprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/tracesamplerprocessor"
@@ -356,7 +356,7 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			}
 		}
 		if multiProcessorCfg.Global.Attributes.CustomerIDReaderEnabled {
-			tp, err = customeridprocessor.NewTraceProcessor(tp, logger)
+			tp, err = tenantidprocessor.NewTraceProcessor(tp, logger)
 			if err != nil {
 				logger.Warn("Failed to build the customer id processor: ", zap.Error(err))
 			}
