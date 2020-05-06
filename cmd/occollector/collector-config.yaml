@@ -1,0 +1,59 @@
+log-level: INFO
+receivers:
+  zipkin: {}
+  jaeger: {}
+  opencensus:
+    keepalive:
+      server-parameters:
+        max-connection-age: 120s
+        max-connection-age-grace: 30s
+queued-exporters:
+  jaeger:
+    # num-workers is the number of queue workers that will be dequeuing batches and sending them out (default is 10)
+    # num-workers: 10
+
+    # queue-size is the maximum number of batches allowed in the queue at a given time (default is 5000)
+    # queue-size: 5000
+
+    # retry-on-failure indicates whether queue processor should retry span batches in case of processing failure (default is true)
+    # retry-on-failure: true
+
+    # backoff-delay is the amount of time a worker waits after a failed send before retrying (default is 5 seconds)
+    # backoff-delay: 5s
+
+    # sender-type is the type of sender used by this processor
+    sender-type: jaeger-thrift-http
+
+    jaeger-thrift-http:
+      collector-endpoint: "https://api.traceable.ai:14268/api/traces"
+      timeout: 5s
+      iam-endpoint: "api.traceable.ai:443"
+global:
+  attributes:
+    pii-filter:
+      complex-data:
+      - key: http.request.body
+        type-key: http.request.header.content-type
+      - key: http.response.body
+        type-key: http.response.header.content-type
+      - key: sql.query
+        type: sql
+      hash-value: false
+      key-regexs:
+      - category: auth
+        regex: ^access_token$
+      - category: auth
+        regex: ^authorization$
+      - category: auth
+        regex: ^api_key$
+      - category: auth
+        regex: ^apikey$
+      - category: auth
+        regex: ^password$
+      - category: auth
+        regex: ^passwd$
+      - category: auth
+        regex: ^secret$
+      prefixes:
+      - http.request.header.
+      - http.response.header.
