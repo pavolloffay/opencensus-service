@@ -83,6 +83,32 @@ func Test_piifilterprocessor_urlencoded_FilterKey_URL(t *testing.T) {
 	assert.Equal(t, filteredParams.Get("password"), "***")
 }
 
+func Test_piifilterprocessor_urlencoded_FailParsing_URL(t *testing.T) {
+	gomega.RegisterTestingT(t)
+
+	logger := zap.New(zapcore.NewNopCore())
+	config := &PiiFilter{HashValue: false,
+		KeyRegExs: []PiiElement{
+			{
+				Regex:    "^password$",
+				Category: "sensitive",
+			},
+		},
+	}
+	pfp, _ := NewTraceProcessor(exportertest.NewNopTraceExporter(), config, logger)
+	filter := newURLEncodedFilter(pfp.(*piifilterprocessor), logger)
+
+	str := "http://x:namedport"
+
+	filterData := &FilterData{
+		DlpElements:             list.New(),
+		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+	}
+	isErr, filtered := filter.Filter(str, "http.url", filterData)
+	assert.True(t, isErr)
+	assert.False(t, filtered)
+}
+
 func Test_piifilterprocessor_urlencoded_FilterValue(t *testing.T) {
 	gomega.RegisterTestingT(t)
 

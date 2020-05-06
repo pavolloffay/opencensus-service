@@ -24,10 +24,12 @@ import (
 )
 
 const (
-	redactedText  = "***"
-	dlpTag        = "traceable.filter.dlp"
-	inspectorTag  = "traceable.apidefinition.inspection"
-	queryParamTag = "http.request.query.param"
+	redactedText      = "***"
+	dlpTag            = "traceable.filter.dlp"
+	inspectorTag      = "traceable.apidefinition.inspection"
+	queryParamTag     = "http.request.query.param"
+	requestCookieTag  = "http.request.cookie"
+	responseCookieTag = "http.response.cookie"
 	// In case of empty json path, platform uses strings defined here as path
 	requestBodyEmptyJsonPath  = "REQUEST_BODY"
 	responseBodyEmptyJsonPath = "RESPONSE_BODY"
@@ -176,6 +178,10 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	switch rawTag {
 	case "http.url":
 		enrichedTag = queryParamTag
+	case "http.request.header.cookie":
+		enrichedTag = requestCookieTag
+	case "http.request.header.set-cookie":
+		enrichedTag = responseCookieTag
 	case "http.request.body":
 		if len(path) == 0 {
 			enrichedPath = requestBodyEmptyJsonPath
@@ -344,6 +350,9 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, filterData 
 			case "sql":
 				pfp.filterSql(span, elem.Key, attrib, filterData)
 				break
+			case "cookie":
+				pfp.filterCookie(span, elem.Key, attrib, filterData)
+				break
 			default: // ignore all other types
 				pfp.logger.Debug("Not filtering complex data type", zap.String("attribute", elem.TypeKey), zap.String("type", dataType))
 				break
@@ -403,6 +412,24 @@ func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *
 	}
 
 	if sqlChanged {
+		pfp.replaceValue(value, filter.FilteredText())
+	}
+}
+
+func (pfp *piifilterprocessor) filterCookie(span *tracepb.Span, key string, value *tracepb.AttributeValue, filterData *FilterData) {
+	cookieString := value.GetStringValue().Value
+
+	filter := newCookieFilter(pfp, pfp.logger)
+	parseFail, cookieChanged := filter.Filter(cookieString, key, filterData)
+
+	// if cookie is invalid, run the value filter on the cookie string to try and
+	// filter out any keywords out of the string
+	if parseFail {
+		pfp.logger.Info("Problem parsing cookie. Falling back to value regex filtering", zap.String("cookie", cookieString))
+		pfp.filterValueRegexs(span, key, value, filterData)
+	}
+
+	if cookieChanged {
 		pfp.replaceValue(value, filter.FilteredText())
 	}
 }
