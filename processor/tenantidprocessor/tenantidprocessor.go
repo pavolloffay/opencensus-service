@@ -3,6 +3,7 @@ package tenantidprocessor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -41,8 +42,15 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, logger *zap.Logger) 
 }
 
 func (processor *tenantidprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
-	// Read the tenantID from the headers
-	addTenantIDToSpans(td.Spans, "__default")
+	// Read the tenant ID from the headers
+	tenantID := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+
+	if tenantID == "" {
+		processor.logger.Warn(fmt.Sprintf("%s HTTP header not found. Dropping spans. TenantID not found.", tenantIDHTTPHeaderKey))
+		return errors.New("Tenant ID not found in ctx argument passed in")
+	}
+
+	addTenantIDToSpans(td.Spans, tenantID)
 
 	return processor.nextConsumer.ConsumeTraceData(ctx, td)
 }
