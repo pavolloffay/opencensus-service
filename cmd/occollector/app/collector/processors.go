@@ -19,7 +19,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/Traceableai/opencensus-service/processor/tenantidprocessor"
 	tchReporter "github.com/jaegertracing/jaeger/cmd/agent/app/reporter/tchannel"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -37,6 +36,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/tenantidprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/tracesamplerprocessor"
 )
 
