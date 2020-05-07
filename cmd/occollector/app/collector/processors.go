@@ -329,7 +329,7 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			zap.Any("values", multiProcessorCfg.Global.Attributes.Values),
 			zap.Any("key-mapping", multiProcessorCfg.Global.Attributes.KeyReplacements),
 			zap.Any("pii-filter", multiProcessorCfg.Global.Attributes.PiiFilter),
-			zap.Bool("customerid-reader-enabled", multiProcessorCfg.Global.Attributes.CustomerIDReaderEnabled),
+			zap.Bool("tenantid-reader-enabled", multiProcessorCfg.Global.Attributes.TenantIDReaderEnabled),
 		)
 
 		var err error
@@ -355,10 +355,10 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 				logger.Warn("Failed to build the PII attribute filter processor: ", zap.Error(err))
 			}
 		}
-		if multiProcessorCfg.Global.Attributes.CustomerIDReaderEnabled {
+		if multiProcessorCfg.Global.Attributes.TenantIDReaderEnabled {
 			tp, err = tenantidprocessor.NewTraceProcessor(tp, logger)
 			if err != nil {
-				logger.Warn("Failed to build the customer id processor: ", zap.Error(err))
+				logger.Warn("Failed to build the tenant id processor: ", zap.Error(err))
 			}
 		}
 	}

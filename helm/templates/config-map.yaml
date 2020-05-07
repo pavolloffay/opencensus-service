@@ -22,4 +22,5 @@ data:
         topic: "{{ .Values.configMap.exporterKafkaTopic }}"
     global:
       attributes:
-        customerid-reader-enabled: true
+        tenantid-reader-enabled: true
+
