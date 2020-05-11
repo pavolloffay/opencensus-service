@@ -1,12 +1,33 @@
 package inspector
 
 import (
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	"fmt"
+	"strings"
+
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
 	"go.uber.org/zap"
 )
 
+const (
+	queryParamPrefix     = "http.request.query.param."
+	requestBodyPrefix    = "http.request.body."
+	requestHeaderPrefix  = "http.request.header."
+	requestCookiePrefix  = "http.request.cookie."
+	responseBodyPrefix   = "http.response.body."
+	responseHeaderPrefix = "http.response.header."
+	responseCookiePrefix = "http.response.cookie."
+)
+
+// Struct for handling extracted values
+type Value struct {
+	OriginalValue interface{}
+	SentOriginal  bool
+	RedactedValue string
+	Redacted      bool
+}
+
 type inspector interface {
-	inspect(message *pb.ApiDefinitionInspection, key string, value string) bool
+	inspect(message *pb.ParamValueInspection, key string, value interface{})
 }
 
 type InspectorManager struct {
@@ -16,7 +37,7 @@ type InspectorManager struct {
 
 func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	var inspectors []inspector
-	inspector := newXXEInspector(logger)
+	inspector := newTypeInspector(logger)
 	inspectors = append(inspectors, inspector)
 
 	return &InspectorManager{
@@ -25,14 +46,83 @@ func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	}
 }
 
-func (im *InspectorManager) EvaluateInspectors(message *pb.ApiDefinitionInspection, key string, value string) bool {
-	for _, inspector := range im.inspectors {
-		hasAnomalies := inspector.inspect(message, key, value)
-		if hasAnomalies {
-			im.logger.Debug("Found Anomaly. Breaking from the loop.")
-			return true
-			break
+func addParamValueInspections(message *pb.HttpApiInspection, key string, inspections *pb.ParamValueInspections) {
+	switch {
+	case strings.HasPrefix(key, queryParamPrefix):
+		if message.QueryParamInspection == nil {
+			message.QueryParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
+		normalizedKey := strings.TrimPrefix(key, queryParamPrefix)
+		message.QueryParamInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, requestBodyPrefix):
+		if message.RequestBodyParamInspection == nil {
+			message.RequestBodyParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, requestBodyPrefix)
+		message.RequestBodyParamInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, requestHeaderPrefix):
+		if message.RequestHeaderParamInspection == nil {
+			message.RequestHeaderParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, requestHeaderPrefix)
+		message.RequestHeaderParamInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, requestCookiePrefix):
+		if message.RequestCookieInspection == nil {
+			message.RequestCookieInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, requestCookiePrefix)
+		message.RequestCookieInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, responseBodyPrefix):
+		if message.ResponseBodyParamInspection == nil {
+			message.ResponseBodyParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, responseBodyPrefix)
+		message.ResponseBodyParamInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, responseHeaderPrefix):
+		if message.ResponseHeaderParamInspection == nil {
+			message.ResponseHeaderParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, responseHeaderPrefix)
+		message.ResponseHeaderParamInspection[normalizedKey] = inspections
+	case strings.HasPrefix(key, responseCookiePrefix):
+		if message.ResponseCookieInspection == nil {
+			message.ResponseCookieInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		normalizedKey := strings.TrimPrefix(key, responseCookiePrefix)
+		message.ResponseCookieInspection[normalizedKey] = inspections
 	}
-	return false
+}
+
+func (im *InspectorManager) EvaluateInspectors(message *pb.HttpApiInspection, keyToValueMap map[string][]*Value) {
+	for key, values := range keyToValueMap {
+		var paramValueInspections []*pb.ParamValueInspection
+		for _, value := range values {
+			paramValueInspection := &pb.ParamValueInspection{}
+			paramValueInspections = append(paramValueInspections, paramValueInspection)
+			paramValueInspection.MetadataInspection = &pb.MetadataInspection{}
+
+			// TODO: Move this to value inspector
+			// Add the check if value is null
+			paramValueInspection.MetadataInspection.Value = &pb.Value{}
+			pbVal := paramValueInspection.MetadataInspection.Value
+			if value.SentOriginal {
+				pbVal.Value = fmt.Sprintf("%v", value.OriginalValue)
+				pbVal.ValueType = pb.ValueType_RAW
+			} else {
+				pbVal.Value = value.RedactedValue
+				if value.Redacted {
+					pbVal.ValueType = pb.ValueType_REDACTED
+				} else {
+					pbVal.ValueType = pb.ValueType_HASHED
+				}
+			}
+			for _, inspector := range im.inspectors {
+				inspector.inspect(paramValueInspection, key, value)
+			}
+		}
+
+		addParamValueInspections(message, key, &pb.ParamValueInspections{
+			ParamInspections: paramValueInspections,
+		})
+	}
 }

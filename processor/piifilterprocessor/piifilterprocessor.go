@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
 	proto "github.com/golang/protobuf/proto"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -80,9 +80,8 @@ type PiiFilter struct {
 }
 
 type FilterData struct {
-	DlpElements             *list.List
-	ApiDefinitionInspection *pb.ApiDefinitionInspection
-	hasAnomalies            bool
+	DlpElements    *list.List
+	RedactedValues map[string][]*inspector.Value
 }
 
 type piifilterprocessor struct {
@@ -206,9 +205,8 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 		}
 
 		filterData := &FilterData{
-			DlpElements:             list.New(),
-			ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
-			hasAnomalies:            false,
+			DlpElements:    list.New(),
+			RedactedValues: make(map[string][]*inspector.Value),
 		}
 		for key, value := range span.Attributes.AttributeMap {
 			if value.GetStringValue() == nil {
@@ -235,7 +233,7 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 
 		pfp.addDlpAttribute(span, filterData.DlpElements)
 
-		pfp.addInspectorAttribute(span, filterData.hasAnomalies, filterData.ApiDefinitionInspection)
+		pfp.addInspectorAttribute(span, filterData.RedactedValues)
 	}
 
 	return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -246,7 +244,7 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 
 	filtered, redacted := pfp.filterKeyRegexs(truncatedKey, key, value.GetStringValue().Value, "", filterData)
 	if filtered {
-		pfp.replaceValue(value, redacted)
+		pfp.replaceValue(value, fmt.Sprintf("%v", redacted))
 	}
 
 	return filtered
@@ -268,28 +266,42 @@ func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey strin
 	return false, nil
 }
 
-func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
+func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value interface{}, path string, filterData *FilterData) (bool, interface{}) {
 	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
 
 	if len(path) > 0 {
 		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
 	}
 
-	filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
-
-	var redacted string
+	var redacted interface{}
+	var val *inspector.Value
+	var isRedacted bool
 	if *piiElem.Redact {
-		redacted = pfp.redactString(value)
+		str := fmt.Sprintf("%v", value)
+		isRedacted, redacted = pfp.redactString(str)
+		val = &inspector.Value{
+			OriginalValue: value,
+			SentOriginal:  false,
+			RedactedValue: fmt.Sprintf("%v", redacted),
+			Redacted:      isRedacted,
+		}
 	} else {
 		// Dont redact. Just use the same value.
 		redacted = value
+		val = &inspector.Value{
+			OriginalValue: value,
+			SentOriginal:  true,
+		}
 	}
+
+	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
+
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
 	return true, redacted
 }
 
-func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
+func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value interface{}, path string, filterData *FilterData) (bool, interface{}) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
 			return pfp.filterMatchedKey(&piiElem, keyToMatch, actualKey, value, path, filterData)
@@ -440,7 +452,8 @@ func (pfp *piifilterprocessor) replacingRegex(value string, regex *regexp.Regexp
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
 		if *piiElem.Redact {
-			return pfp.redactString(src)
+			_, str := pfp.redactString(src)
+			return str
 		} else {
 			return src
 		}
@@ -449,13 +462,15 @@ func (pfp *piifilterprocessor) replacingRegex(value string, regex *regexp.Regexp
 	return matchCount > 0, filtered
 }
 
-func (pfp *piifilterprocessor) redactString(value string) string {
+// In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
+func (pfp *piifilterprocessor) redactString(value string) (bool, string) {
 	if pfp.hashValue {
 		h := make([]byte, 64)
 		sha3.ShakeSum256(h, []byte(value))
-		return fmt.Sprintf("%x", h)
+		hashedVal := fmt.Sprintf("%x", h)
+		return false, hashedVal
 	} else {
-		return redactedText
+		return true, redactedText
 	}
 }
 
@@ -532,12 +547,15 @@ func (pfp *piifilterprocessor) addDlpAttribute(span *tracepb.Span, dlpElements *
 	span.GetAttributes().AttributeMap[dlpTag] = pbAttrib
 }
 
-func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, hasAnomalies bool, apiDefinitionInspection *pb.ApiDefinitionInspection) {
-	if !hasAnomalies {
+func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, redactedValues map[string][]*inspector.Value) {
+	if len(redactedValues) == 0 {
 		return
 	}
+	httpApiInspection := &pb.HttpApiInspection{}
 
-	serialized, err := proto.Marshal(apiDefinitionInspection)
+	pfp.inspectorManager.EvaluateInspectors(httpApiInspection, redactedValues)
+
+	serialized, err := proto.Marshal(httpApiInspection)
 	if err != nil {
 		pfp.logger.Warn("Problem marshalling Inspector attr object.", zap.Error(err))
 		return

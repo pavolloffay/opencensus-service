@@ -1,8 +1,6 @@
 package piifilterprocessor
 
 import (
-	"fmt"
-
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
@@ -127,8 +125,7 @@ func (f *jsonFilter) filterJSONScalar(t interface{}, piiElem *PiiElement, key st
 		}
 	case interface{}:
 		if piiElem != nil {
-			str := fmt.Sprintf("%v", tt)
-			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, str, jsonPath, filterData)
+			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, tt, jsonPath, filterData)
 			return true, redacted
 		}
 	}
