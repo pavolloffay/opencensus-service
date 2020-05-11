@@ -1,7 +1,6 @@
 package inspector
 
 import (
-	"fmt"
 	"strings"
 
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
@@ -27,7 +26,7 @@ type Value struct {
 }
 
 type inspector interface {
-	inspect(message *pb.ParamValueInspection, key string, value interface{})
+	inspect(message *pb.ParamValueInspection, key string, value *Value)
 }
 
 type InspectorManager struct {
@@ -37,7 +36,9 @@ type InspectorManager struct {
 
 func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	var inspectors []inspector
-	inspector := newTypeInspector(logger)
+	inspector := newValueInspector(logger)
+	inspectors = append(inspectors, inspector)
+	inspector = newTypeInspector(logger)
 	inspectors = append(inspectors, inspector)
 
 	return &InspectorManager{
@@ -100,22 +101,6 @@ func (im *InspectorManager) EvaluateInspectors(message *pb.HttpApiInspection, ke
 			paramValueInspection := &pb.ParamValueInspection{}
 			paramValueInspections = append(paramValueInspections, paramValueInspection)
 			paramValueInspection.MetadataInspection = &pb.MetadataInspection{}
-
-			// TODO: Move this to value inspector
-			// Add the check if value is null
-			paramValueInspection.MetadataInspection.Value = &pb.Value{}
-			pbVal := paramValueInspection.MetadataInspection.Value
-			if value.SentOriginal {
-				pbVal.Value = fmt.Sprintf("%v", value.OriginalValue)
-				pbVal.ValueType = pb.ValueType_RAW
-			} else {
-				pbVal.Value = value.RedactedValue
-				if value.Redacted {
-					pbVal.ValueType = pb.ValueType_REDACTED
-				} else {
-					pbVal.ValueType = pb.ValueType_HASHED
-				}
-			}
 			for _, inspector := range im.inspectors {
 				inspector.inspect(paramValueInspection, key, value)
 			}
