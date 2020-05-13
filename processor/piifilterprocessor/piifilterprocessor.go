@@ -569,7 +569,7 @@ func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, redacte
 		return
 	}
 	encoded := b64.StdEncoding.EncodeToString(serialized)
-
+	fmt.Println(encoded)
 	pbAttrib := &tracepb.AttributeValue{}
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encoded}}
 	span.GetAttributes().AttributeMap[inspectorTag] = pbAttrib
