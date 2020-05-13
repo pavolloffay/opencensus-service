@@ -1,6 +1,9 @@
 package inspector
 
 import (
+	"strconv"
+	"strings"
+
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
 	"go.uber.org/zap"
 )
@@ -15,8 +18,32 @@ func newTypeInspector(logger *zap.Logger) inspector {
 	}
 }
 
-func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
+func isBool(value string) bool {
+	isBool := (strings.EqualFold("true", value) || strings.EqualFold("false", value))
+	return isBool
+}
 
+func isInteger(value string) bool {
+	_, err := strconv.ParseInt(value, 0, 64)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func isFloat(value string) bool {
+	_, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func isChar(value string) bool {
+	return (len(value) == 1 && !isInteger(value))
+}
+
+func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
 	if message == nil {
 		ti.logger.Warn("Message is nil")
 		return
@@ -24,20 +51,19 @@ func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, v
 
 	var paramType pb.ParamValueType
 
-	switch value.OriginalValue.(type) {
-	case bool:
+	switch {
+	case isBool(value.OriginalValue):
 		paramType = pb.ParamValueType_BOOLEAN
-	case int, int8, int64, uint, uint8, uint16, uint32, uint64:
+	case isInteger(value.OriginalValue):
 		paramType = pb.ParamValueType_INTEGER
-	case float32, float64:
+	case isFloat(value.OriginalValue):
 		paramType = pb.ParamValueType_FLOAT
-	case rune:
+	case isChar(value.OriginalValue):
 		paramType = pb.ParamValueType_CHAR
-	case string:
-		paramType = pb.ParamValueType_STRING
 	default:
-		paramType = pb.ParamValueType_UNKNOWN
+		paramType = pb.ParamValueType_STRING
 	}
+
 	message.MetadataInspection.Type = paramType
 	return
 }

@@ -19,10 +19,8 @@ const (
 
 // Struct for handling extracted values
 type Value struct {
-	OriginalValue interface{}
-	SentOriginal  bool
-	RedactedValue string
-	Redacted      bool
+	OriginalValue string
+	ValueProto    *pb.Value
 }
 
 type inspector interface {
@@ -36,9 +34,7 @@ type InspectorManager struct {
 
 func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	var inspectors []inspector
-	inspector := newValueInspector(logger)
-	inspectors = append(inspectors, inspector)
-	inspector = newTypeInspector(logger)
+	inspector := newTypeInspector(logger)
 	inspectors = append(inspectors, inspector)
 
 	return &InspectorManager{
@@ -101,6 +97,7 @@ func (im *InspectorManager) EvaluateInspectors(message *pb.HttpApiInspection, ke
 			paramValueInspection := &pb.ParamValueInspection{}
 			paramValueInspections = append(paramValueInspections, paramValueInspection)
 			paramValueInspection.MetadataInspection = &pb.MetadataInspection{}
+			paramValueInspection.MetadataInspection.Value = value.ValueProto
 			for _, inspector := range im.inspectors {
 				inspector.inspect(paramValueInspection, key, value)
 			}

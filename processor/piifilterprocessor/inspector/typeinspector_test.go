@@ -16,7 +16,7 @@ func Test_typeinspector_int(t *testing.T) {
 	message := &pb.ParamValueInspection{}
 	message.MetadataInspection = &pb.MetadataInspection{}
 
-	inspector.inspect(message, "test.key", &Value{OriginalValue: 32})
+	inspector.inspect(message, "test.key", &Value{OriginalValue: "32"})
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_INTEGER)
 }
@@ -27,7 +27,7 @@ func Test_typeinspector_float(t *testing.T) {
 	message := &pb.ParamValueInspection{}
 	message.MetadataInspection = &pb.MetadataInspection{}
 
-	inspector.inspect(message, "test.key", &Value{OriginalValue: 32.1})
+	inspector.inspect(message, "test.key", &Value{OriginalValue: "32.1"})
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_FLOAT)
 }
@@ -38,7 +38,7 @@ func Test_typeinspector_bool(t *testing.T) {
 	message := &pb.ParamValueInspection{}
 	message.MetadataInspection = &pb.MetadataInspection{}
 
-	inspector.inspect(message, "test.key", &Value{OriginalValue: true})
+	inspector.inspect(message, "test.key", &Value{OriginalValue: "true"})
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_BOOLEAN)
 }
@@ -49,7 +49,7 @@ func Test_typeinspector_char(t *testing.T) {
 	message := &pb.ParamValueInspection{}
 	message.MetadataInspection = &pb.MetadataInspection{}
 
-	inspector.inspect(message, "test.key", &Value{OriginalValue: 'a'})
+	inspector.inspect(message, "test.key", &Value{OriginalValue: "a"})
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_CHAR)
 }
@@ -63,16 +63,4 @@ func Test_typeinspector_string(t *testing.T) {
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "value"})
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_STRING)
-}
-
-func Test_typeinspector_unknown(t *testing.T) {
-	logger := zap.New(zapcore.NewNopCore())
-	inspector := newTypeInspector(logger)
-	message := &pb.ParamValueInspection{}
-	message.MetadataInspection = &pb.MetadataInspection{}
-
-	var a interface{}
-	inspector.inspect(message, "test.key", &Value{OriginalValue: a})
-
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_UNKNOWN)
 }

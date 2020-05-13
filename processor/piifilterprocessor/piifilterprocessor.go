@@ -244,7 +244,7 @@ func (pfp *piifilterprocessor) filterKeyRegexsAndReplaceValue(span *tracepb.Span
 
 	filtered, redacted := pfp.filterKeyRegexs(truncatedKey, key, value.GetStringValue().Value, "", filterData)
 	if filtered {
-		pfp.replaceValue(value, fmt.Sprintf("%v", redacted))
+		pfp.replaceValue(value, redacted)
 	}
 
 	return filtered
@@ -266,31 +266,39 @@ func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey strin
 	return false, nil
 }
 
-func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value interface{}, path string, filterData *FilterData) (bool, interface{}) {
+func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
 
 	if len(path) > 0 {
 		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
 	}
 
-	var redacted interface{}
-	var val *inspector.Value
+	var redacted string
 	var isRedacted bool
+	var sentOriginal bool
 	if *piiElem.Redact {
-		str := fmt.Sprintf("%v", value)
-		isRedacted, redacted = pfp.redactString(str)
-		val = &inspector.Value{
-			OriginalValue: value,
-			SentOriginal:  false,
-			RedactedValue: fmt.Sprintf("%v", redacted),
-			Redacted:      isRedacted,
-		}
+		isRedacted, redacted = pfp.redactString(value)
+		sentOriginal = false
 	} else {
 		// Dont redact. Just use the same value.
 		redacted = value
-		val = &inspector.Value{
-			OriginalValue: value,
-			SentOriginal:  true,
+		sentOriginal = true
+	}
+
+	val := &inspector.Value{
+		OriginalValue: value,
+		ValueProto:    &pb.Value{},
+	}
+
+	if sentOriginal {
+		val.ValueProto.Value = value
+		val.ValueProto.ValueType = pb.ValueType_RAW
+	} else {
+		val.ValueProto.Value = redacted
+		if isRedacted {
+			val.ValueProto.ValueType = pb.ValueType_REDACTED
+		} else {
+			val.ValueProto.ValueType = pb.ValueType_HASHED
 		}
 	}
 
@@ -298,10 +306,10 @@ func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch 
 
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
-	return true, redacted
+	return (!sentOriginal), redacted
 }
 
-func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value interface{}, path string, filterData *FilterData) (bool, interface{}) {
+func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	for regexp, piiElem := range pfp.keyRegexs {
 		if regexp.MatchString(keyToMatch) {
 			return pfp.filterMatchedKey(&piiElem, keyToMatch, actualKey, value, path, filterData)
