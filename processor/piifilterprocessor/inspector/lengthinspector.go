@@ -15,9 +15,9 @@ func newLengthInspector(logger *zap.Logger) inspector {
 	}
 }
 
-func (ti *lengthinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
+func (li *lengthinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
 	if message == nil {
-		ti.logger.Warn("Message is nil")
+		li.logger.Warn("Message is nil")
 		return
 	}
 

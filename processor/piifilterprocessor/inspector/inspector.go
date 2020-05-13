@@ -36,6 +36,8 @@ func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	var inspectors []inspector
 	inspector := newTypeInspector(logger)
 	inspectors = append(inspectors, inspector)
+	inspector = newLengthInspector(logger)
+	inspectors = append(inspectors, inspector)
 
 	return &InspectorManager{
 		logger:     logger,
