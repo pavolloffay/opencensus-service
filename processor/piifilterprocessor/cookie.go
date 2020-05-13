@@ -1,7 +1,6 @@
 package piifilterprocessor
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -62,12 +61,7 @@ func (f *cookieFilter) Filter(input, key string, filterData *FilterData) (bool, 
 	for _, cookie := range cookies {
 		matchedKey, redacted := f.pfp.filterKeyRegexs(cookie.Name, key, cookie.Value, cookie.Name, filterData)
 		if matchedKey {
-			redactedUnboxed, ok := redacted.(string)
-			if !ok {
-				cookie.Value = fmt.Sprintf("%v", redacted)
-			} else {
-				cookie.Value = redactedUnboxed
-			}
+			cookie.Value = redacted
 			filtered = true
 		} else {
 			redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(cookie.Value, key, cookie.Name, filterData)

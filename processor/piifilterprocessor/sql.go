@@ -47,7 +47,7 @@ func (f *sqlFilter) Filter(input string, key string, filterData *FilterData) (bo
 				closeQuote = string(text[lenText-1])
 				text = text[:lenText-1]
 			}
-			_, redacted := f.pfp.redactString(text)
+			redacted := f.pfp.redactString(text)
 			token.SetText(openQuote + redacted + closeQuote)
 			redactedLiteral = true
 		}

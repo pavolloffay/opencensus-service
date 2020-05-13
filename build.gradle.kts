@@ -11,7 +11,7 @@ plugins {
 group = "ai.traceable.agent"
 
 val protobufVersion = "3.11.4"
-val apiInspectionApiVersion = "0.1.54"
+val apiInspectionApiVersion = "0.1.62"
 val apiInspectionApiProto: Configuration by configurations.creating
 dependencies {
   apiInspectionApiProto("ai.traceable.platform:api-inspection-api:$apiInspectionApiVersion")
