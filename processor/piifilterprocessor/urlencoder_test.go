@@ -17,7 +17,7 @@ func Test_piifilterprocessor_urlencoded_FilterKey(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -51,7 +51,7 @@ func Test_piifilterprocessor_urlencoded_FilterKey_URL(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -87,7 +87,7 @@ func Test_piifilterprocessor_urlencoded_FailParsing_URL(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -113,7 +113,7 @@ func Test_piifilterprocessor_urlencoded_FilterValue(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		ValueRegExs: []PiiElement{
 			{
 				Regex:    "^filter_value$",

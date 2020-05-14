@@ -29,7 +29,7 @@ func Test_piifilterprocessor_cookie_setcookie_FilterKey(t *testing.T) {
 func filterCookie(t *testing.T, key string, cookieStr string, expected string) {
 	gomega.RegisterTestingT(t)
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
