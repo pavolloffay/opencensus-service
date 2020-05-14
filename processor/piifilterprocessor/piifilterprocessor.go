@@ -194,6 +194,16 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	return enrichedTag, enrichedPath
 }
 
+func getFullyQuallifiedInspectorKey(actualKey string, path string) string {
+	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
+
+	if len(enrichedPath) > 0 {
+		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
+	}
+
+	return inspectorKey
+}
+
 func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !pfp.hasFilters {
 		return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -267,46 +277,13 @@ func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey strin
 }
 
 func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
-	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
+	inspectorKey := getFullyQuallifiedInspectorKey(actualKey, path)
 
-	if len(path) > 0 {
-		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
-	}
-
-	var redacted string
-	var isRedacted bool
-	var sentOriginal bool
-	if *piiElem.Redact {
-		isRedacted, redacted = pfp.redactString(value)
-		sentOriginal = false
-	} else {
-		// Dont redact. Just use the same value.
-		redacted = value
-		sentOriginal = true
-	}
-
-	val := &inspector.Value{
-		OriginalValue: value,
-		ValueProto:    &pb.Value{},
-	}
-
-	if sentOriginal {
-		val.ValueProto.Value = value
-		val.ValueProto.ValueType = pb.ValueType_RAW
-	} else {
-		val.ValueProto.Value = redacted
-		if isRedacted {
-			val.ValueProto.ValueType = pb.ValueType_REDACTED
-		} else {
-			val.ValueProto.ValueType = pb.ValueType_HASHED
-		}
-	}
-
-	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
+	isModified, redacted := pfp.redactAndFilterData(*piiElem.Redact, value, inspectorKey, filterData)
 
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
-	return (!sentOriginal), redacted
+	return isModified, redacted
 }
 
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
@@ -330,9 +307,12 @@ func (pfp *piifilterprocessor) filterValueRegexs(span *tracepb.Span, key string,
 }
 
 func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string, path string, filterData *FilterData) (string, bool) {
+	inspectorKey := getFullyQuallifiedInspectorKey(key, path)
+
 	filtered := false
 	for regexp, piiElem := range pfp.valueRegexs {
-		filtered, value = pfp.replacingRegex(value, regexp, piiElem)
+		filtered, value = pfp.replacingRegex(value, inspectorKey, regexp, piiElem, filterData)
+
 		if filtered {
 			pfp.addDlpElementToList(filterData.DlpElements, key, path, piiElem.Category)
 		}
@@ -454,20 +434,35 @@ func (pfp *piifilterprocessor) filterCookie(span *tracepb.Span, key string, valu
 	}
 }
 
-func (pfp *piifilterprocessor) replacingRegex(value string, regex *regexp.Regexp, piiElem PiiElement) (bool, string) {
+func (pfp *piifilterprocessor) replacingRegex(value string, key string, regex *regexp.Regexp, piiElem PiiElement, filterData *FilterData) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		if *piiElem.Redact {
-			_, str := pfp.redactString(src)
-			return str
-		} else {
-			return src
-		}
+		_, str := pfp.redactAndFilterData(*piiElem.Redact, src, key, filterData)
+		return str
 	})
 
 	return matchCount > 0, filtered
+}
+
+func (pfp *piifilterprocessor) redactAndFilterData(redact bool, value string, inspectorKey string, filterData *FilterData) (bool, string) {
+	var redacted string
+	var isRedacted bool
+	var sentOriginal bool
+	if redact {
+		isRedacted, redacted = pfp.redactString(value)
+		sentOriginal = false
+	} else {
+		// Dont redact. Just use the same value.
+		redacted = value
+		sentOriginal = true
+	}
+
+	val := inspector.NewValue(value, sentOriginal, redacted, isRedacted)
+	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
+
+	return (!sentOriginal), redacted
 }
 
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
@@ -569,7 +564,7 @@ func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, redacte
 		return
 	}
 	encoded := b64.StdEncoding.EncodeToString(serialized)
-	fmt.Println(encoded)
+
 	pbAttrib := &tracepb.AttributeValue{}
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encoded}}
 	span.GetAttributes().AttributeMap[inspectorTag] = pbAttrib

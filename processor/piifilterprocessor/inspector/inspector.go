@@ -23,6 +23,26 @@ type Value struct {
 	ValueProto    *pb.Value
 }
 
+func NewValue(originalValue string, sentOriginal bool, redacted string, isRedacted bool) *Value {
+	val := &Value{
+		OriginalValue: originalValue,
+		ValueProto:    &pb.Value{},
+	}
+
+	if sentOriginal {
+		val.ValueProto.Value = originalValue
+		val.ValueProto.ValueType = pb.ValueType_RAW
+	} else {
+		val.ValueProto.Value = redacted
+		if isRedacted {
+			val.ValueProto.ValueType = pb.ValueType_REDACTED
+		} else {
+			val.ValueProto.ValueType = pb.ValueType_HASHED
+		}
+	}
+	return val
+}
+
 type inspector interface {
 	inspect(message *pb.ParamValueInspection, key string, value *Value)
 }
