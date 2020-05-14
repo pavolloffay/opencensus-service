@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
 	proto "github.com/golang/protobuf/proto"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -80,9 +80,8 @@ type PiiFilter struct {
 }
 
 type FilterData struct {
-	DlpElements             *list.List
-	ApiDefinitionInspection *pb.ApiDefinitionInspection
-	hasAnomalies            bool
+	DlpElements    *list.List
+	RedactedValues map[string][]*inspector.Value
 }
 
 type piifilterprocessor struct {
@@ -195,6 +194,16 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	return enrichedTag, enrichedPath
 }
 
+func getFullyQuallifiedInspectorKey(actualKey string, path string) string {
+	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
+
+	if len(enrichedPath) > 0 {
+		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
+	}
+
+	return inspectorKey
+}
+
 func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !pfp.hasFilters {
 		return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -206,9 +215,8 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 		}
 
 		filterData := &FilterData{
-			DlpElements:             list.New(),
-			ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
-			hasAnomalies:            false,
+			DlpElements:    list.New(),
+			RedactedValues: make(map[string][]*inspector.Value),
 		}
 		for key, value := range span.Attributes.AttributeMap {
 			if value.GetStringValue() == nil {
@@ -235,7 +243,7 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 
 		pfp.addDlpAttribute(span, filterData.DlpElements)
 
-		pfp.addInspectorAttribute(span, filterData.hasAnomalies, filterData.ApiDefinitionInspection)
+		pfp.addInspectorAttribute(span, filterData.RedactedValues)
 	}
 
 	return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -269,24 +277,13 @@ func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey strin
 }
 
 func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
-	inspectorKey, enrichedPath := mapRawToEnriched(actualKey, path)
+	inspectorKey := getFullyQuallifiedInspectorKey(actualKey, path)
 
-	if len(path) > 0 {
-		inspectorKey = fmt.Sprintf("%s.%s", inspectorKey, enrichedPath)
-	}
+	isModified, redacted := pfp.redactAndFilterData(*piiElem.Redact, value, inspectorKey, filterData)
 
-	filterData.hasAnomalies = pfp.inspectorManager.EvaluateInspectors(filterData.ApiDefinitionInspection, inspectorKey, value) || filterData.hasAnomalies
-
-	var redacted string
-	if *piiElem.Redact {
-		redacted = pfp.redactString(value)
-	} else {
-		// Dont redact. Just use the same value.
-		redacted = value
-	}
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
-	return true, redacted
+	return isModified, redacted
 }
 
 func (pfp *piifilterprocessor) filterKeyRegexs(keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
@@ -310,9 +307,12 @@ func (pfp *piifilterprocessor) filterValueRegexs(span *tracepb.Span, key string,
 }
 
 func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string, path string, filterData *FilterData) (string, bool) {
+	inspectorKey := getFullyQuallifiedInspectorKey(key, path)
+
 	filtered := false
 	for regexp, piiElem := range pfp.valueRegexs {
-		filtered, value = pfp.replacingRegex(value, regexp, piiElem)
+		filtered, value = pfp.replacingRegex(value, inspectorKey, regexp, piiElem, filterData)
+
 		if filtered {
 			pfp.addDlpElementToList(filterData.DlpElements, key, path, piiElem.Category)
 		}
@@ -434,28 +434,46 @@ func (pfp *piifilterprocessor) filterCookie(span *tracepb.Span, key string, valu
 	}
 }
 
-func (pfp *piifilterprocessor) replacingRegex(value string, regex *regexp.Regexp, piiElem PiiElement) (bool, string) {
+func (pfp *piifilterprocessor) replacingRegex(value string, key string, regex *regexp.Regexp, piiElem PiiElement, filterData *FilterData) (bool, string) {
 	matchCount := 0
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		if *piiElem.Redact {
-			return pfp.redactString(src)
-		} else {
-			return src
-		}
+		_, str := pfp.redactAndFilterData(*piiElem.Redact, src, key, filterData)
+		return str
 	})
 
 	return matchCount > 0, filtered
 }
 
-func (pfp *piifilterprocessor) redactString(value string) string {
+func (pfp *piifilterprocessor) redactAndFilterData(redact bool, value string, inspectorKey string, filterData *FilterData) (bool, string) {
+	var redacted string
+	var isRedacted bool
+	var sentOriginal bool
+	if redact {
+		isRedacted, redacted = pfp.redactString(value)
+		sentOriginal = false
+	} else {
+		// Dont redact. Just use the same value.
+		redacted = value
+		sentOriginal = true
+	}
+
+	val := inspector.NewValue(value, sentOriginal, redacted, isRedacted)
+	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
+
+	return (!sentOriginal), redacted
+}
+
+// In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
+func (pfp *piifilterprocessor) redactString(value string) (bool, string) {
 	if pfp.hashValue {
 		h := make([]byte, 64)
 		sha3.ShakeSum256(h, []byte(value))
-		return fmt.Sprintf("%x", h)
+		hashedVal := fmt.Sprintf("%x", h)
+		return false, hashedVal
 	} else {
-		return redactedText
+		return true, redactedText
 	}
 }
 
@@ -532,12 +550,15 @@ func (pfp *piifilterprocessor) addDlpAttribute(span *tracepb.Span, dlpElements *
 	span.GetAttributes().AttributeMap[dlpTag] = pbAttrib
 }
 
-func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, hasAnomalies bool, apiDefinitionInspection *pb.ApiDefinitionInspection) {
-	if !hasAnomalies {
+func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, redactedValues map[string][]*inspector.Value) {
+	if len(redactedValues) == 0 {
 		return
 	}
+	httpApiInspection := &pb.HttpApiInspection{}
 
-	serialized, err := proto.Marshal(apiDefinitionInspection)
+	pfp.inspectorManager.EvaluateInspectors(httpApiInspection, redactedValues)
+
+	serialized, err := proto.Marshal(httpApiInspection)
 	if err != nil {
 		pfp.logger.Warn("Problem marshalling Inspector attr object.", zap.Error(err))
 		return

@@ -47,9 +47,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{"password":"***"}
 	]}`)
 
-	jsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
+	jsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
 
 	valueJsonInput := []byte(`{
 	"key_or_value":{
@@ -65,12 +65,12 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		}
 	}`)
 
-	valueJsonInputExpectedDlp := "[{\"key\":\"custom.data\",\"path\":\"key_or_value.b\",\"type\":\"pii\"}]"
+	valueJsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"key_or_value.b\",\"type\":\"pii\"}]"
 
 	multipleAttrsExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"custom.data\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
+		"{\"key\":\"http.request.body\",\"path\":\"password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
 
 	invalidJsonInput := []byte(`{
 	"key_or_value":{
@@ -137,6 +137,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{
 			name: "filter_key",
 			args: PiiFilter{
+				Prefixes: []string{"http.request.header."},
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
@@ -150,7 +151,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"password": {
+								"http.request.header.password": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
 								},
 							},
@@ -165,11 +166,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"password": {
+									"http.request.header.password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih8KCHBhc3N3b3JkEhMKERoPCgcKAyoqKhACEAUYBiIA"}},
+									},
 									dlpTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"Key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"Key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -182,6 +186,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{
 			name: "filter_key_int_value",
 			args: PiiFilter{
+				Prefixes: []string{"http.request.header."},
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
@@ -224,6 +229,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{
 			name: "filter_key_dont_redact",
 			args: PiiFilter{
+				Prefixes: []string{"http.request.header."},
 				KeyRegExs: []PiiElement{
 					{
 						Regex:    "^password$",
@@ -238,7 +244,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"password": {
+								"http.request.header.password": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
 								},
 							},
@@ -253,11 +259,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"password": {
+									"http.request.header.password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IiAKCHBhc3N3b3JkEhQKEhoQCggKBmFiYzEyMxAFGAYiAA=="}},
+									},
 									dlpTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -283,7 +292,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"cc": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "4111 2222 3333 4444"}},
 								},
 							},
@@ -298,11 +307,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"cc": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "EiMKDFJFUVVFU1RfQk9EWRITChEaDwoHCgMqKioQAhAFGBMiAA=="}},
+									},
 									dlpTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.body\",\"path\":\"\",\"type\":\"pci\"}]"}},
 									},
 								},
 							},
@@ -346,6 +358,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "4111 2222 3333 4444"}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"}]"}},
@@ -396,6 +411,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"cc": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "*** *** ccc *** *** ccc"}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
+									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"cc\",\"path\":\"\",\"type\":\"pci\"},{\"key\":\"cc\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
@@ -411,7 +429,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 			name: "prefix",
 			args: PiiFilter{
 				Prefixes: []string{
-					"a.",
+					"http.request.header.",
 				},
 				KeyRegExs: []PiiElement{
 					{
@@ -426,7 +444,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"a.password": {
+								"http.request.header.password": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "aaa123"}},
 								},
 								"b.password": {
@@ -447,7 +465,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"a.password": {
+									"http.request.header.password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									"b.password": {
@@ -456,8 +474,11 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih8KCHBhc3N3b3JkEhMKERoPCgcKAyoqKhACEAUYBiIA"}},
+									},
 									dlpTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"a.password\",\"path\":\"\",\"type\":\"sensitive\"},{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"},{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},
@@ -501,6 +522,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									"password": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: sha3Abc123}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: ""}},
+									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"password\",\"path\":\"\",\"type\":\"\"}]"}},
 									},
@@ -523,7 +547,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:     "custom.data",
+						Key:     "http.request.body",
 						TypeKey: "http.request.headers.content-type",
 					},
 				},
@@ -534,7 +558,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"custom.data": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
 								},
 								"http.request.headers.content-type": {
@@ -552,11 +576,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"custom.data": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
 									},
 									"http.request.headers.content-type": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string("application/json;charset=utf-8")}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Eh0KCmIucGFzc3dvcmQSDwoNGgsKBwoDKioqEAIQBRIdCgpjLnBhc3N3b3JkEg8KDRoLCgcKAyoqKhACEAUSGwoIcGFzc3dvcmQSDwoNGgsKBwoDKioqEAIQBQ=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
@@ -581,7 +608,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:  "custom.data",
+						Key:  "http.request.body",
 						Type: "json",
 					},
 				},
@@ -592,7 +619,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"custom.data": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
 								},
 							},
@@ -607,8 +634,11 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"custom.data": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Eh0KCHBhc3N3b3JkEhEKDxoNCgkKB3Jvb3RfcHcQBRIhCgpiLnBhc3N3b3JkEhMKERoPCgsKCW5lc3RlZF9wdxAFEiAKCmMucGFzc3dvcmQSEgoQGg4KCgoIYXJyYXlfcHcQBQ=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: jsonInputExpectedDlp}},
@@ -636,7 +666,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:  "custom.data",
+						Key:  "http.request.body",
 						Type: "json",
 					},
 				},
@@ -647,7 +677,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"custom.data": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
 								},
 								"auth-key": {
@@ -665,11 +695,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"custom.data": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
 									},
 									"auth-key": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "EhsKCHBhc3N3b3JkEg8KDRoLCgcKAyoqKhACEAUSHQoKYi5wYXNzd29yZBIPCg0aCwoHCgMqKioQAhAFEh0KCmMucGFzc3dvcmQSDwoNGgsKBwoDKioqEAIQBQ=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: multipleAttrsExpectedDlpAttrValue}},
@@ -693,7 +726,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:  "custom.data",
+						Key:  "http.request.body",
 						Type: "json",
 					},
 				},
@@ -704,7 +737,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"custom.data": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonInput)}},
 								},
 							},
@@ -719,8 +752,11 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"custom.data": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonExpected)}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "EiUKDmtleV9vcl92YWx1ZS5iEhMKERoPCgcKAyoqKhACEAUYDCIA"}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueJsonInputExpectedDlp}},
@@ -744,7 +780,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 				ComplexData: []PiiComplexData{
 					{
-						Key:  "custom.data",
+						Key:  "http.request.body",
 						Type: "json",
 					},
 				},
@@ -755,7 +791,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
-								"custom.data": {
+								"http.request.body": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonInput)}},
 								},
 							},
@@ -770,11 +806,14 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
-									"custom.data": {
+									"http.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonExpected)}},
 									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "EjYKDFJFUVVFU1RfQk9EWRImChEaDwoHCgMqKioQAhAFGAwiAAoRGg8KBwoDKioqEAIQBRgMIgA="}},
+									},
 									dlpTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"custom.data\",\"path\":\"\",\"type\":\"pii\"}]"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.body\",\"path\":\"\",\"type\":\"pii\"}]"}},
 									},
 								},
 							},
@@ -850,6 +889,13 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				if s1 == nil || s2 == nil {
 					return cmp.Equal(s1, s2)
 				}
+
+				if tt.name == "json_filter" || tt.name == "json_filter_dont_redact" || tt.name == "multiple_attributes" {
+					if strings.Contains(s2.Value, "==") {
+						return true
+					}
+				}
+
 				// Strings are JSON objects
 				if tt.name != "invalid_json_filter" && strings.HasPrefix(s1.Value, "{") && strings.HasPrefix(s2.Value, "{") {
 					return gomega.Expect(s1.Value).Should(gomega.MatchJSON(s2.Value))

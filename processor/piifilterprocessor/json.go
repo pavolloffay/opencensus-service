@@ -128,8 +128,8 @@ func (f *jsonFilter) filterJSONScalar(t interface{}, piiElem *PiiElement, key st
 	case interface{}:
 		if piiElem != nil {
 			str := fmt.Sprintf("%v", tt)
-			_, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, str, jsonPath, filterData)
-			return true, redacted
+			isModified, redacted := f.pfp.filterMatchedKey(piiElem, key, actualKey, str, jsonPath, filterData)
+			return isModified, redacted
 		}
 	}
 	return false, t
