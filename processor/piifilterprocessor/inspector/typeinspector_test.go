@@ -43,17 +43,6 @@ func Test_typeinspector_bool(t *testing.T) {
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_BOOLEAN)
 }
 
-func Test_typeinspector_char(t *testing.T) {
-	logger := zap.New(zapcore.NewNopCore())
-	inspector := newTypeInspector(logger)
-	message := &pb.ParamValueInspection{}
-	message.MetadataInspection = &pb.MetadataInspection{}
-
-	inspector.inspect(message, "test.key", &Value{OriginalValue: "a"})
-
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_CHAR)
-}
-
 func Test_typeinspector_string(t *testing.T) {
 	logger := zap.New(zapcore.NewNopCore())
 	inspector := newTypeInspector(logger)
