@@ -37,13 +37,10 @@ const (
 
 // PiiFilter identifies configuration for PII filtering
 type PiiElement struct {
-	Regex    string `mapstructure:"regex"`
-	Category string `mapstructure:"category"`
-	// Should the value be redacted or not.
-	// Default is true and in case it's nil compileRegexes() function in this file
-	// will set it to a "true" pointer
-	Redact *bool `mapstructure:"redact,omitempty"`
-	Fqn    *bool `mapstructure:"fqn,omitempty"`
+	Regex    string            `mapstructure:"regex"`
+	Category string            `mapstructure:"category"`
+	Redact   RedactionStrategy `mapstructure:"redaction-strategy,omitempty"`
+	Fqn      *bool             `mapstructure:"fqn,omitempty"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -62,8 +59,8 @@ type DlpElement struct {
 }
 
 type PiiFilter struct {
-	// HashValue when true will sha3 the filtered value
-	HashValue bool `mapstructure:"hash-value"`
+	// Global redaction strategy. Defaults to Redact
+	Redact RedactionStrategy `mapstructure:"redaction-strategy,omitempty"`
 	// Prefixes attribute name prefix to match the keyword against
 	Prefixes []string `mapstructure:"prefixes"`
 	// // Keywords are the attribute name of which the value will be filtered
@@ -88,7 +85,7 @@ type piifilterprocessor struct {
 	nextConsumer     consumer.TraceConsumer
 	logger           *zap.Logger
 	hasFilters       bool
-	hashValue        bool
+	redact           RedactionStrategy
 	prefixes         []string
 	keyRegexs        map[*regexp.Regexp]PiiElement
 	valueRegexs      map[*regexp.Regexp]PiiElement
@@ -101,6 +98,13 @@ var _ processor.TraceProcessor = (*piifilterprocessor)(nil)
 func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, logger *zap.Logger) (processor.TraceProcessor, error) {
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
+	}
+
+	var globalRedactionStrategy RedactionStrategy
+	if int(filter.Redact) == 0 {
+		globalRedactionStrategy = Redact
+	} else {
+		globalRedactionStrategy = filter.Redact
 	}
 
 	lenPrefixes := len(filter.Prefixes)
@@ -117,12 +121,12 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		}
 	}
 
-	keyRegexs, err := compileRegexs(filter.KeyRegExs)
+	keyRegexs, err := compileRegexs(filter.KeyRegExs, globalRedactionStrategy)
 	if err != nil {
 		return nil, err
 	}
 
-	valueRegexs, err := compileRegexs(filter.ValueRegExs)
+	valueRegexs, err := compileRegexs(filter.ValueRegExs, globalRedactionStrategy)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +144,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		nextConsumer:     nextConsumer,
 		logger:           logger,
 		hasFilters:       hasFilters,
-		hashValue:        filter.HashValue,
+		redact:           globalRedactionStrategy,
 		prefixes:         prefixes,
 		keyRegexs:        keyRegexs,
 		valueRegexs:      valueRegexs,
@@ -149,7 +153,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 	}, nil
 }
 
-func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
+func compileRegexs(regexs []PiiElement, globalRedactionStrategy RedactionStrategy) (map[*regexp.Regexp]PiiElement, error) {
 	lenRegexs := len(regexs)
 	regexps := make(map[*regexp.Regexp]PiiElement, lenRegexs)
 	for _, elem := range regexs {
@@ -157,10 +161,11 @@ func compileRegexs(regexs []PiiElement) (map[*regexp.Regexp]PiiElement, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error compiling key regex %s already specified", elem.Regex)
 		}
-		if elem.Redact == nil {
-			redact := true
-			elem.Redact = &redact
+
+		if int(elem.Redact) == 0 {
+			elem.Redact = globalRedactionStrategy
 		}
+
 		if elem.Fqn == nil {
 			fqn := false
 			elem.Fqn = &fqn
@@ -279,7 +284,7 @@ func (pfp *piifilterprocessor) matchKeyRegexs(keyToMatch string, actualKey strin
 func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch string, actualKey string, value string, path string, filterData *FilterData) (bool, string) {
 	inspectorKey := getFullyQuallifiedInspectorKey(actualKey, path)
 
-	isModified, redacted := pfp.redactAndFilterData(*piiElem.Redact, value, inspectorKey, filterData)
+	isModified, redacted := pfp.redactAndFilterData(piiElem.Redact, value, inspectorKey, filterData)
 
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
@@ -439,40 +444,47 @@ func (pfp *piifilterprocessor) replacingRegex(value string, key string, regex *r
 
 	filtered := regex.ReplaceAllStringFunc(value, func(src string) string {
 		matchCount++
-		_, str := pfp.redactAndFilterData(*piiElem.Redact, src, key, filterData)
+		_, str := pfp.redactAndFilterData(piiElem.Redact, src, key, filterData)
 		return str
 	})
 
 	return matchCount > 0, filtered
 }
 
-func (pfp *piifilterprocessor) redactAndFilterData(redact bool, value string, inspectorKey string, filterData *FilterData) (bool, string) {
+func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, value string, inspectorKey string, filterData *FilterData) (bool, string) {
 	var redacted string
 	var isRedacted bool
-	var sentOriginal bool
-	if redact {
-		isRedacted, redacted = pfp.redactString(value)
-		sentOriginal = false
-	} else {
-		// Dont redact. Just use the same value.
-		redacted = value
-		sentOriginal = true
+	switch redact {
+	case Redact:
+		redacted = redactedText
+		isRedacted = true
+	case Hash:
+		h := make([]byte, 64)
+		sha3.ShakeSum256(h, []byte(value))
+		redacted = fmt.Sprintf("%x", h)
+		isRedacted = false
+	default:
+		redacted = redactedText
+		isRedacted = true
 	}
 
-	val := inspector.NewValue(value, sentOriginal, redacted, isRedacted)
+	val := inspector.NewValue(value, redacted, isRedacted)
 	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
 
-	return (!sentOriginal), redacted
+	return true, redactedText
 }
 
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
 func (pfp *piifilterprocessor) redactString(value string) (bool, string) {
-	if pfp.hashValue {
+	switch pfp.redact {
+	case Hash:
 		h := make([]byte, 64)
 		sha3.ShakeSum256(h, []byte(value))
-		hashedVal := fmt.Sprintf("%x", h)
-		return false, hashedVal
-	} else {
+		redacted := fmt.Sprintf("%x", h)
+		return false, redacted
+	case Redact:
+		return true, redactedText
+	default:
 		return true, redactedText
 	}
 }

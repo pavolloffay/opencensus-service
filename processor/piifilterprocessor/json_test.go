@@ -79,7 +79,7 @@ func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr boo
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",

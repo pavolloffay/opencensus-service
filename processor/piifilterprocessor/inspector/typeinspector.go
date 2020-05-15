@@ -39,10 +39,6 @@ func isFloat(value string) bool {
 	return true
 }
 
-func isChar(value string) bool {
-	return (len(value) == 1 && !isInteger(value))
-}
-
 func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
 	if message == nil {
 		ti.logger.Warn("Message is nil")
@@ -58,8 +54,6 @@ func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, v
 		paramType = pb.ParamValueType_INTEGER
 	case isFloat(value.OriginalValue):
 		paramType = pb.ParamValueType_FLOAT
-	case isChar(value.OriginalValue):
-		paramType = pb.ParamValueType_CHAR
 	default:
 		paramType = pb.ParamValueType_STRING
 	}
