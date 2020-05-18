@@ -31,11 +31,11 @@ jobs:
     steps:
       - setup_build_environment
       - run: ./gradlew copyModsecurityCbindingFiles
-      - run: cp -R modsec/bridge /tmp/workspace
+      - run: cp -R build/modsec /tmp/workspace
       - persist_to_workspace:
           root: *workspace_root
           paths:
-            - bridge
+            - modsec
 
   build:
     executor: golang_docker
@@ -47,8 +47,7 @@ jobs:
           fingerprints:
             - "f8:97:3f:f7:78:04:12:8c:16:01:c9:65:9b:db:62:91" # iam repo
       - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
-      - run: cp -v -R /tmp/workspace/bridge modsec/
-      - run: cp modsec/bridge/libmodsecurity.so modsec/bridge/libmodsecurity.so.3
+      - run: cp -v -R /tmp/workspace/modsec build/
       - run: make install-tools
       - run: make test
       - run: make collector

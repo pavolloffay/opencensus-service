@@ -1,8 +1,8 @@
 package modsec
 
 /*
-#cgo CFLAGS: -Ibridge
-#cgo LDFLAGS: -Lbridge -lmodsecurity -lmodsecurity-wrapper
+#cgo CFLAGS: -I../build/modsec
+#cgo LDFLAGS: -L../build/modsec -lmodsecurity -lmodsecurity-wrapper
 #include <library.h>
 #include <stdlib.h>
 */

@@ -25,7 +25,3 @@ coverage.html
 
 .gradle
 build/**
-messagedeserializer.go
-modsec-test
-modsec-test.go
-modsec/bridge/**

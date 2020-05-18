@@ -13,7 +13,7 @@ group = "ai.traceable.agent"
 val protobufVersion = "3.11.4"
 val apiInspectionApiVersion = "0.1.69"
 val apiInspectionApiProto: Configuration by configurations.creating
-val modsecurityCbindingsVersion = "0.1.23"
+val modsecurityCbindingsVersion = "0.1.28"
 val modsecurityCbindingFiles: Configuration by configurations.creating
 dependencies {
   apiInspectionApiProto("ai.traceable.platform:api-inspection-api:$apiInspectionApiVersion")
@@ -62,7 +62,7 @@ tasks.register<Copy>("copyModsecurityCbindingFiles") {
     relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
   }
   includeEmptyDirs = false
-  into("modsec/bridge")
+  into("$buildDir/modsec")
 }
 
 traceableDocker {
