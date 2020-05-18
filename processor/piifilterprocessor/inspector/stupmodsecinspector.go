@@ -1,4 +1,4 @@
-//+build dummy
+//+build collector
 
 package inspector
 

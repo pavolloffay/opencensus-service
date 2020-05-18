@@ -1,4 +1,4 @@
-//+build release
+//+build collector_modsec
 
 package inspector
 
