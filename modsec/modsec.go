@@ -135,9 +135,7 @@ func (ms *modsec) CleanupRuleEngine() {
 }
 
 func NewModsecLib() ModsecLib {
-	return &modsec{
-		ruleEnginePtr: nil,
-	}
+	return &modsec{}
 }
 
 var _ ModsecLib = (*modsec)(nil)
