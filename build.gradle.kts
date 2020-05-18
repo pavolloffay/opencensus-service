@@ -11,10 +11,13 @@ plugins {
 group = "ai.traceable.agent"
 
 val protobufVersion = "3.11.4"
-val apiInspectionApiVersion = "0.1.62"
+val apiInspectionApiVersion = "0.1.69"
 val apiInspectionApiProto: Configuration by configurations.creating
+val modsecurityCbindingsVersion = "0.1.28"
+val modsecurityCbindingFiles: Configuration by configurations.creating
 dependencies {
   apiInspectionApiProto("ai.traceable.platform:api-inspection-api:$apiInspectionApiVersion")
+  modsecurityCbindingFiles("ai.traceable.platform:modsecurity-cbindings:$modsecurityCbindingsVersion")
 }
 
 val patternList = mutableListOf<String>("api-inspection/**/*.proto")
@@ -50,6 +53,16 @@ protobuf {
       }
     }
   }
+}
+
+tasks.register<Copy>("copyModsecurityCbindingFiles") {
+  dependsOn(modsecurityCbindingFiles)
+  from({ modsecurityCbindingFiles.map { zipTree(it) } })
+  eachFile {
+    relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
+  }
+  includeEmptyDirs = false
+  into("$buildDir/modsec")
 }
 
 traceableDocker {

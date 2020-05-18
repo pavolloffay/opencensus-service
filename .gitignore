@@ -25,4 +25,3 @@ coverage.html
 
 .gradle
 build/**
-messagedeserializer.go

@@ -36,7 +36,7 @@ fmt-vet-lint-test: fmt vet lint test
 
 .PHONY: test
 test:
-	$(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
+	CGO_ENABLED=1 GO111MODULE=on LD_LIBRARY_PATH=$(PWD)/build/modsec/ DYLD_LIBRARY_PATH=$(PWD)/build/modsec/ $(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
 
 .PHONY: travis-ci
 travis-ci: fmt vet lint test-with-cover
