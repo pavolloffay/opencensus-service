@@ -419,7 +419,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IqEBCghwYXNzd29yZBKUAQqRARqOAQqFAQqAATJiYTBiNDdlMzM3MWFiZmNjYjI5ODczYzlhNDVmOTM4MzE2YWZjMDJjNjQ0ZWY5ZTk4NDc4ODkzZjFmNWUzYTczOWZmMDA2ZmE4NWQ4NDE4OTQ5ZWUyZDVlZjQzYjY0ZGY3Y2M5ZmU4YjdjYTcxZmYxZWM2YzFlZDFmNmNmMzdlEAEQBRgGIgA="}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IqEBCghwYXNzd29yZBKUAQqRARKOAQqFAQqAATJiYTBiNDdlMzM3MWFiZmNjYjI5ODczYzlhNDVmOTM4MzE2YWZjMDJjNjQ0ZWY5ZTk4NDc4ODkzZjFmNWUzYTczOWZmMDA2ZmE4NWQ4NDE4OTQ5ZWUyZDVlZjQzYjY0ZGY3Y2M5ZmU4YjdjYTcxZmYxZWM2YzFlZDFmNmNmMzdlEAEQBRgGIgA="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"\"}]"}},
