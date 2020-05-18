@@ -43,11 +43,12 @@ type inspector interface {
 }
 
 type InspectorManager struct {
-	logger     *zap.Logger
-	inspectors []inspector
+	logger          *zap.Logger
+	inspectors      []inspector
+	modsecInspector *modsecinspector
 }
 
-func NewInspectorManager(logger *zap.Logger) *InspectorManager {
+func NewInspectorManager(logger *zap.Logger, modsecConfig ModsecConfig) *InspectorManager {
 	var inspectors []inspector
 	inspector := newTypeInspector(logger)
 	inspectors = append(inspectors, inspector)
@@ -56,9 +57,14 @@ func NewInspectorManager(logger *zap.Logger) *InspectorManager {
 	inspector = newSpecialCharDistInspector(logger)
 	inspectors = append(inspectors, inspector)
 
+	var modsecInspector *modsecinspector
+	modsecInspector = NewModsecInspector(logger, modsecConfig)
+	// should we error out here if modsecinspector is nil?
+
 	return &InspectorManager{
-		logger:     logger,
-		inspectors: inspectors,
+		logger:          logger,
+		inspectors:      inspectors,
+		modsecInspector: modsecInspector,
 	}
 }
 
@@ -110,6 +116,9 @@ func addParamValueInspections(message *pb.HttpApiInspection, key string, inspect
 }
 
 func (im *InspectorManager) EvaluateInspectors(message *pb.HttpApiInspection, keyToValueMap map[string][]*Value) {
+	if im.modsecInspector != nil {
+		im.modsecInspector.inspect(message, keyToValueMap)
+	}
 	for key, values := range keyToValueMap {
 		var paramValueInspections []*pb.ParamValueInspection
 		for _, value := range values {

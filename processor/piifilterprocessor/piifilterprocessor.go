@@ -74,6 +74,8 @@ type PiiFilter struct {
 	// ComplexData contains all complex data types to filter, such
 	// as json, sql etc
 	ComplexData []PiiComplexData `mapstructure:"complex-data"`
+	// Config for modsec inspector
+	Modsec inspector.ModsecConfig `mapstructure:"modsec-config"`
 }
 
 type FilterData struct {
@@ -138,7 +140,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-	inspectorManager := inspector.NewInspectorManager(logger)
+	inspectorManager := inspector.NewInspectorManager(logger, filter.Modsec)
 
 	return &piifilterprocessor{
 		nextConsumer:     nextConsumer,

@@ -10,6 +10,7 @@ import (
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	"github.com/google/go-cmp/cmp"
 	"github.com/onsi/gomega"
 	"go.uber.org/zap"
@@ -700,6 +701,60 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"sql.query\",\"path\":\"\",\"type\":\"sql_filter\"}]"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "modsecanomaly",
+			args: PiiFilter{
+				Prefixes: []string{
+					"http.request.header.",
+				},
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+				},
+				Modsec: inspector.ModsecConfig{
+					Rules: `SecRule REQUEST_HEADERS:password "attacker" "id:20"`,
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"http.request.header.password": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "attacker"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"http.request.header.password": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih8KCHBhc3N3b3JkEhMKERIPCgcKAyoqKhACEAUYCCIASggKBgoCMjAgAQ=="}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
 									},
 								},
 							},

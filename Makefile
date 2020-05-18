@@ -87,7 +87,11 @@ agent:
 
 .PHONY: collector
 collector:
-	GO111MODULE=on CGO_ENABLED=0 go build -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
+	GO111MODULE=on CGO_ENABLED=1 go build -tags="release" -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
+
+.PHONY: dummy-collector
+dummy-collector:
+	GO111MODULE=on CGO_ENABLED=0 go build -tags="dummy" -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
 
 .PHONY: unisvc
 unisvc:
