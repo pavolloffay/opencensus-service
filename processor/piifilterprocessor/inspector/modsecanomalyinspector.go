@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type modsecinspector struct {
+type modsecanomalyinspector struct {
 	logger *zap.Logger
 	lib    modsec.ModsecLib
 }
@@ -21,7 +21,7 @@ type ModsecConfig struct {
 	Rules     string `json:"rules"`
 }
 
-func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) *modsecinspector {
+func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecinspector {
 	lib := modsec.NewModsecLib()
 	lib.Init()
 	if len(modsecConfig.Rules) != 0 {
@@ -39,13 +39,13 @@ func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) *modsecin
 	} else {
 		return nil
 	}
-	return &modsecinspector{
+	return &modsecanomalyinspector{
 		logger: logger,
 		lib:    lib,
 	}
 }
 
-func (mi *modsecinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
+func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
 	attrMap := make(map[string]string)
 	for key, values := range keyToValuesMap {
 		if len(values) == 1 {
@@ -83,3 +83,5 @@ func (mi *modsecinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap
 	}
 	message.AnomalyInspection.ModSecAnomalies = modSecAnomalies
 }
+
+var _ modsecinspector = (*modsecanomalyinspector)(nil)

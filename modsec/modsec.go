@@ -131,7 +131,9 @@ func (ms *modsec) ProcessAttributes(attributeMap map[string]string) ([]RuleMatch
 }
 
 func (ms *modsec) CleanupRuleEngine() {
-	C.modsecurity_cleanup_rule_engine(ms.ruleEnginePtr)
+	if ms.ruleEnginePtr != nil {
+		C.modsecurity_cleanup_rule_engine(ms.ruleEnginePtr)
+	}
 }
 
 func NewModsecLib() ModsecLib {

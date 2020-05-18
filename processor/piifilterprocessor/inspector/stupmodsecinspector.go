@@ -7,19 +7,16 @@ import (
 	"go.uber.org/zap"
 )
 
-type modsecinspector struct {
+type stupmodsecinspector struct {
 }
 
 type ModsecConfig struct {
-	ConfigDir string `json:"config-dir"`
-	FileName  string `json:"file-name"`
-	Rules     string `json:"rules"`
 }
 
-func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) *modsecinspector {
-	return nil
+func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecinspector {
+	return &stupmodsecinspector{}
 }
 
-func (mi *modsecinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
+func (smi *stupmodsecinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
 	return
 }
