@@ -33,7 +33,6 @@ func (a *attrArr) cCount() C.int {
 	return C.int(len(a.arr))
 }
 
-// It seems we don't need to free the elements in slice
 func (a *attrArr) free() {
 	for _, elm := range a.arr {
 		C.free(unsafe.Pointer(elm.key))
@@ -49,7 +48,6 @@ type RuleMatch struct {
 	ParanoiaLevel int
 }
 
-// TODO: Should we return errors from here?
 type ModsecLib interface {
 	Init()
 	NewRuleEngine(configDir string, fileName string) error

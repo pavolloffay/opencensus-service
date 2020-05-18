@@ -28,7 +28,4 @@ build/**
 messagedeserializer.go
 modsec-test
 modsec-test.go
-modsec/bridge/libmodsecurity-wrapper.dylib
-modsec/bridge/libmodsecurity.dylib
-temp_rules/**
-.ssh/**
+modsec/bridge/**

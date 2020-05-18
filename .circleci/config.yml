@@ -26,6 +26,17 @@ commands:
           at: *workspace_root
 
 jobs:
+  download-binaries:
+    executor: gradle_docker
+    steps:
+      - setup_build_environment
+      - run: ./gradlew copyModsecurityCbindingFiles
+      - run: cp -R modsec/bridge /tmp/workspace
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - modsec/bridge
+
   build:
     executor: golang_docker
     resource_class: large
@@ -36,6 +47,8 @@ jobs:
           fingerprints:
             - "f8:97:3f:f7:78:04:12:8c:16:01:c9:65:9b:db:62:91" # iam repo
       - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
+      - run: cp -v -R /tmp/workspace/bridge modsec/
+      - run: ln -s modsec/bridge/libmodsecurity.so modsec/bridge/libmodsecurity.so.3
       - run: make install-tools
       - run: make test
       - run: make collector
@@ -86,13 +99,18 @@ workflows:
   version: 2
   build-and-publish:
     jobs:
+      - download-binaries:
+          context: ci-credentials
       - build:
           context: ci-credentials
+          requires:
+            - download-binaries
       - validate-charts:
           context: continuous_deployment
       - publish:
           context: ci-credentials
           requires:
+            - download-binaries
             - build
             - validate-charts
           filters:
