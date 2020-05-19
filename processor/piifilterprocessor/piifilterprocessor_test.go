@@ -384,7 +384,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{
 			name: "sha3_redact",
 			args: PiiFilter{
-				Redact: Hash,
+				RedactStr: "Hash",
 				Prefixes: []string{
 					"http.request.header.",
 				},
@@ -802,14 +802,14 @@ func Test_piifilterprocessor_CompileRegexes(t *testing.T) {
 			Category: "sensitive",
 		},
 		{
-			Regex:    "^b$",
-			Category: "sensitive",
-			Redact:   Redact,
+			Regex:     "^b$",
+			Category:  "sensitive",
+			RedactStr: "Redact",
 		},
 		{
-			Regex:    "^c$",
-			Category: "sensitive",
-			Redact:   Hash,
+			Regex:     "^c$",
+			Category:  "sensitive",
+			RedactStr: "Hash",
 		},
 	}
 

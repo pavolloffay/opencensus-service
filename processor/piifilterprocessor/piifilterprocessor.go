@@ -37,10 +37,11 @@ const (
 
 // PiiFilter identifies configuration for PII filtering
 type PiiElement struct {
-	Regex    string            `mapstructure:"regex"`
-	Category string            `mapstructure:"category"`
-	Redact   RedactionStrategy `mapstructure:"redaction-strategy,omitempty"`
-	Fqn      *bool             `mapstructure:"fqn,omitempty"`
+	Regex     string `mapstructure:"regex"`
+	Category  string `mapstructure:"category"`
+	RedactStr string `mapstructure:"redaction-strategy"`
+	Redact    RedactionStrategy
+	Fqn       *bool `mapstructure:"fqn,omitempty"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -60,7 +61,8 @@ type DlpElement struct {
 
 type PiiFilter struct {
 	// Global redaction strategy. Defaults to Redact
-	Redact RedactionStrategy `mapstructure:"redaction-strategy,omitempty"`
+	RedactStr string `mapstructure:"redaction-strategy"`
+	Redact    RedactionStrategy
 	// Prefixes attribute name prefix to match the keyword against
 	Prefixes []string `mapstructure:"prefixes"`
 	// // Keywords are the attribute name of which the value will be filtered
@@ -74,6 +76,8 @@ type PiiFilter struct {
 	// ComplexData contains all complex data types to filter, such
 	// as json, sql etc
 	ComplexData []PiiComplexData `mapstructure:"complex-data"`
+	// Config for modsec inspector
+	Modsec inspector.ModsecConfig `mapstructure:"modsec-config"`
 }
 
 type FilterData struct {
@@ -99,6 +103,8 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
 	}
+
+	filter.Redact = toId(filter.RedactStr)
 
 	var globalRedactionStrategy RedactionStrategy
 	if int(filter.Redact) == 0 {
@@ -138,7 +144,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 
 	hasFilters := len(keyRegexs) > 0 || len(valueRegexs) > 0 || len(complexData) > 0
 
-	inspectorManager := inspector.NewInspectorManager(logger)
+	inspectorManager := inspector.NewInspectorManager(logger, filter.Modsec)
 
 	return &piifilterprocessor{
 		nextConsumer:     nextConsumer,
@@ -162,6 +168,7 @@ func compileRegexs(regexs []PiiElement, globalRedactionStrategy RedactionStrateg
 			return nil, fmt.Errorf("error compiling key regex %s already specified", elem.Regex)
 		}
 
+		elem.Redact = toId(elem.RedactStr)
 		if int(elem.Redact) == 0 {
 			elem.Redact = globalRedactionStrategy
 		}
@@ -184,7 +191,7 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 		enrichedTag = queryParamTag
 	case "http.request.header.cookie":
 		enrichedTag = requestCookieTag
-	case "http.request.header.set-cookie":
+	case "http.response.header.set-cookie":
 		enrichedTag = responseCookieTag
 	case "http.request.body":
 		if len(path) == 0 {

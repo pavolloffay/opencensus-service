@@ -49,7 +49,7 @@ jobs:
       - run: git config --global url."git@github.com:".insteadOf "https://github.com/"
       - run: mkdir build && cp -v -R /tmp/workspace/modsec build/
       - run: make install-tools
-      - run: make test
+      - run: make test-modsec
       - run: make collector
       - run: cp -v ./bin/occollector_linux /tmp/workspace
       - persist_to_workspace:
