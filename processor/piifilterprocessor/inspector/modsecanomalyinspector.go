@@ -37,6 +37,7 @@ func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecins
 			return nil
 		}
 	} else {
+		logger.Warn("Problem while processing configuration.")
 		return nil
 	}
 	return &modsecanomalyinspector{
