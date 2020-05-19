@@ -50,12 +50,12 @@ jobs:
       - run: mkdir build && cp -v -R /tmp/workspace/modsec build/
       - run: make install-tools
       - run: make test-modsec
-      - run: make collector
-      - run: cp -v ./bin/occollector_linux /tmp/workspace
+      - run: make collector-modsec
+      - run: cp -v ./bin/occollector_modsec_linux /tmp/workspace
       - persist_to_workspace:
           root: *workspace_root
           paths:
-            - occollector_linux
+            - occollector_modsec_linux
 
   publish:
     executor: gradle_docker
@@ -65,8 +65,9 @@ jobs:
             - "9b:ec:1d:cd:4d:46:f9:2d:b7:7a:80:6d:16:ca:e1:4d"
       - setup_build_environment
       - setup_remote_docker
-      - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
       - run: ./gradlew :tag -Prelease
+      - run: cp -v /tmp/workspace/occollector_modsec_linux ./deployments
+      - run: ./gradlew copyModsecurityCbindingFiles copyModsecurityCrsFiles -PcopyPath=deployments
       - run: ./gradlew dockerPushImage
       - run: git push origin $(./gradlew -q :printVersion)
 
