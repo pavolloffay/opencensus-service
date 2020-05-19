@@ -1,11 +1,7 @@
 package inspector
 
 import (
-	"fmt"
-	"strings"
-
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
-	jsoniter "github.com/json-iterator/go"
 
 	"go.uber.org/zap"
 )
@@ -41,53 +37,6 @@ func newSpecialCharDistInspector(logger *zap.Logger) inspector {
 	}
 }
 
-func (scdi *specialchardistinspector) nosqlOperatorPresent(value string) bool {
-	scdi.logger.Debug("Parsing json", zap.String("json", value))
-	fmt.Println(value)
-
-	if len(value) == 0 {
-		return false
-	}
-
-	var parsed interface{}
-	err := jsoniter.UnmarshalFromString(value, &parsed)
-	if err != nil {
-		scdi.logger.Info("Problem parsing json", zap.Error(err), zap.String("json", value))
-		return false
-	}
-
-	isPresent := scdi.processJson(parsed)
-
-	return isPresent
-
-}
-
-func (scdi *specialchardistinspector) processJson(t interface{}) bool {
-	switch tt := t.(type) {
-	case []interface{}:
-		for _, v := range tt {
-			isPresent := scdi.processJson(v)
-			if isPresent {
-				return true
-			}
-		}
-	case map[string]interface{}:
-		for k, v := range tt {
-			if strings.HasPrefix(k, "$") {
-				fmt.Println("Found operator in key: ", k)
-				return true
-			}
-			isPresent := scdi.processJson(v)
-			if isPresent {
-				return true
-			}
-		}
-	case interface{}:
-		return false
-	}
-	return false
-}
-
 func (scdi *specialchardistinspector) inspect(message *pb.ParamValueInspection, key string, value *Value) {
 	if message == nil {
 		scdi.logger.Warn("Message is nil")
@@ -111,10 +60,6 @@ func (scdi *specialchardistinspector) inspect(message *pb.ParamValueInspection, 
 		message.MetadataInspection.SpecialCharInspection.SpecialCharDistribution[runeValAscii] =
 			message.MetadataInspection.SpecialCharInspection.SpecialCharDistribution[runeValAscii] + 1
 	}
-	if strings.ContainsRune(value.OriginalValue, '$') {
-		scdi.nosqlOperatorPresent(value.OriginalValue)
-	}
-
 	return
 }
 
