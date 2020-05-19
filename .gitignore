@@ -18,9 +18,6 @@ bin/
 # order to simplify docker build commands. Ignore these files if proper clean up fails.
 cmd/ocagent/ocagent_linux
 cmd/occollector/occollector_linux
-deployments/occollector_modsec_linux
-deployments/modsec/**
-deployments/config/**
 
 # Coverage
 coverage.txt
@@ -28,3 +25,4 @@ coverage.html
 
 .gradle
 build/**
+deployments/artifacts/**

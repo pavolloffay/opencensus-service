@@ -10,7 +10,7 @@ plugins {
 
 group = "ai.traceable.agent"
 
-var copyPath = project.properties.getOrDefault("copyPath", "$buildDir").toString()
+var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").toString()
 
 val protobufVersion = "3.11.4"
 val apiInspectionApiVersion = "0.1.69"
@@ -66,12 +66,12 @@ tasks.register<Copy>("copyModsecurityCbindingFiles") {
     relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
   }
   includeEmptyDirs = false
-  into("$copyPath/modsec")
+  into("$artifactPath/modsec")
 }
 
 tasks.register<Copy>("copyModsecurityMainConfig") {
   from("modsec/rules")
-  into("$copyPath/config")
+  into("$artifactPath/config")
 }
 
 tasks.register<Copy>("copyModsecurityCrsFiles") {
@@ -82,7 +82,7 @@ tasks.register<Copy>("copyModsecurityCrsFiles") {
     relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
   }
   includeEmptyDirs = false
-  into("$copyPath/config")
+  into("$artifactPath/config")
 }
 
 traceableDocker {
@@ -90,4 +90,9 @@ traceableDocker {
     imageName.set("$group/oc-collector")
     dockerFile.set(file("deployments/Dockerfile"))
   }
+}
+
+tasks.named("dockerBuildImages") {
+  dependsOn("copyModsecurityCbindingFiles")
+  dependsOn("copyModsecurityCrsFiles")
 }

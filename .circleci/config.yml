@@ -66,9 +66,8 @@ jobs:
       - setup_build_environment
       - setup_remote_docker
       - run: ./gradlew :tag -Prelease
-      - run: cp -v /tmp/workspace/occollector_modsec_linux ./deployments
-      - run: ./gradlew copyModsecurityCbindingFiles copyModsecurityCrsFiles -PcopyPath=deployments
-      - run: ./gradlew dockerPushImage
+      - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
+      - run: ./gradlew dockerPushImage -PartifactPath=deployments/artifacts/
       - run: git push origin $(./gradlew -q :printVersion)
 
   validate-charts:
