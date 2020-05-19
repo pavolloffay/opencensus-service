@@ -28,3 +28,13 @@ func Test_nosqloperatorinspector_operatorabsent(t *testing.T) {
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "{\"key1\":[{\"gt\":\"$test\"}, \"$test1\"],\"lt\" : \"100\"}"})
 	assert.False(t, message.MetadataInspection.SpecialCharInspection.ContainsNosqlOp)
 }
+
+func Test_nosqloperatorinspector_partialjson(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	inspector := newNoSqlOperatorInspector(logger)
+	message := &pb.ParamValueInspection{}
+	message.MetadataInspection = &pb.MetadataInspection{}
+
+	inspector.inspect(message, "test.key", &Value{OriginalValue: "{\"$lt\" : \"100}"})
+	assert.False(t, message.MetadataInspection.SpecialCharInspection.ContainsNosqlOp)
+}
