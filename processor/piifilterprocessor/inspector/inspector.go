@@ -60,8 +60,6 @@ func NewInspectorManager(logger *zap.Logger, modsecConfig ModsecConfig) *Inspect
 	inspectors = append(inspectors, inspector)
 	inspector = newSpecialCharDistInspector(logger)
 	inspectors = append(inspectors, inspector)
-	inspector = newNoSqlOperatorInspector(logger)
-	inspectors = append(inspectors, inspector)
 
 	modsecInspector := NewModsecInspector(logger, modsecConfig)
 
