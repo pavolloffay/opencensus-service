@@ -36,7 +36,7 @@ fmt-vet-lint-test: fmt vet lint test
 
 .PHONY: test
 test:
-	CGO_ENABLED=1 GO111MODULE=on LD_LIBRARY_PATH=$(PWD)/build/modsec/ DYLD_LIBRARY_PATH=$(PWD)/build/modsec/ $(GOTEST) -tags=collector $(GOTEST_OPT) $(ALL_PKGS)
+	CGO_ENABLED=1 GO111MODULE=on $(GOTEST) -tags=collector $(GOTEST_OPT) $(ALL_PKGS)
 
 .PHONY: test-modsec
 test-modsec:
