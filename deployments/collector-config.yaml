@@ -31,8 +31,9 @@ queued-exporters:
 global:
   attributes:
     pii-filter:
+      redaction-strategy: redact
       modsec-config:
-        config-dir: "/config"
+        config-dir: "/"
         file-name: "modsecurity-detector.conf"
       complex-data:
       - key: http.request.body
@@ -47,7 +48,6 @@ global:
         type: cookie
       - key: http.response.header.set-cookie
         type: cookie
-      redaction-strategy: redact
       key-regexs:
       - category: auth
         regex: ^access_token$
