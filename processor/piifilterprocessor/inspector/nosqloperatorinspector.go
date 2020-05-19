@@ -23,14 +23,10 @@ func newNoSqlOperatorInspector(logger *zap.Logger) inspector {
 func (scdi *nosqloperatorinspector) nosqlOperatorPresent(value string) bool {
 	scdi.logger.Debug("Parsing json", zap.String("json", value))
 
-	if len(value) == 0 {
-		return false
-	}
-
 	var parsed interface{}
 	err := jsoniter.UnmarshalFromString(value, &parsed)
 	if err != nil {
-		scdi.logger.Info("Problem parsing json", zap.Error(err), zap.String("json", value))
+		scdi.logger.Debug("Problem parsing json", zap.Error(err), zap.String("json", value))
 		return false
 	}
 
