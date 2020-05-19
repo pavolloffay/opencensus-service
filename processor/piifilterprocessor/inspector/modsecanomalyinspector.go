@@ -16,9 +16,9 @@ type modsecanomalyinspector struct {
 }
 
 type ModsecConfig struct {
-	ConfigDir string `json:"config-dir"`
-	FileName  string `json:"file-name"`
-	Rules     string `json:"rules"`
+	ConfigDir string `mapstructure:"config-dir"`
+	FileName  string `mapstructure:"file-name"`
+	Rules     string `mapstructure:"rules"`
 }
 
 func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecinspector {
