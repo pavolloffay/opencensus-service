@@ -23,13 +23,31 @@ env:
   - name: GOGC
     value: "80"
 
-containerPortOpencensus: 55678
-containerPortJaeger: 14268
+containerPorts:
+  - name: grpc-opencensus
+    containerPort: 55678
+  - name: http-jaeger
+    containerPort: 14268
 
 service:
   type: ClusterIP
-  portOpencensus: 55678
-  portHttpJaeger: 14268
+  ports:
+  - name: grpc-opencensus
+    port: 55678
+    targetPort: 55678
+    protocol: TCP
+  - name: http-jaeger
+    port: 14268
+    targetPort: 14268
+    protocol: TCP
+
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
 
 resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -71,18 +89,30 @@ volumes:
           path: oc-collector-config.yaml
     name: oc-collector-config-vol
 
-# Node selector
-# If this does not work for localhost deployment add the "workload-general: enabled" label to the localhost k8s node.
-nodeSelector:
-  workload-general: enabled
+nodeSelector: {}
 
 ###########
 # Config Maps
 ###########
 configMap:
   name: oc-collector-conf
-  logLevel: INFO
-  exporterKafkaTopic: jaeger-spans
+  data:
+    log-level: INFO
+    receivers:
+      opencensus:
+        # keepalive settings can help load balancing, see receiver/README.md for more info.
+        keepalive:
+          server-parameters:
+            max-connection-age: 120s
+            max-connection-age-grace: 30s
+      jaeger: {}
+    exporters:
+      kafka:
+        brokers: ["bootstrap:9092"]
+        topic: "jaeger-spans"
+    global:
+      attributes:
+        customerid-reader-enabled: true
 
 kafka-topic-creator:
   jobName: jaeger-spans-kafka-topic-creator

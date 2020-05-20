@@ -7,20 +7,5 @@ metadata:
     release: {{ .Release.Name }}
 data:
   oc-collector-config: |-
-    log-level: {{ .Values.configMap.logLevel }}
-    receivers:
-      opencensus:
-        # keepalive settings can help load balancing, see receiver/README.md for more info.
-        keepalive:
-          server-parameters:
-            max-connection-age: 120s
-            max-connection-age-grace: 30s            
-      jaeger: {}
-    exporters:
-      kafka:
-        brokers: ["bootstrap:9092"]
-        topic: "{{ .Values.configMap.exporterKafkaTopic }}"
-    global:
-      attributes:
-        tenantid-reader-enabled: true
+    {{- toYaml .Values.configMap.data | nindent 4 }}
 

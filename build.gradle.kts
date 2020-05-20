@@ -11,16 +11,19 @@ plugins {
 group = "ai.traceable.agent"
 
 val protobufVersion = "3.11.4"
-val apiDefintionApiVersion = "0.1.37"
-val apiDefintionApiProto: Configuration by configurations.creating
+val apiInspectionApiVersion = "0.1.69"
+val apiInspectionApiProto: Configuration by configurations.creating
+val modsecurityCbindingsVersion = "0.1.28"
+val modsecurityCbindingFiles: Configuration by configurations.creating
 dependencies {
-  apiDefintionApiProto("ai.traceable.platform:api-definition-api:$apiDefintionApiVersion")
+  apiInspectionApiProto("ai.traceable.platform:api-inspection-api:$apiInspectionApiVersion")
+  modsecurityCbindingFiles("ai.traceable.platform:modsecurity-cbindings:$modsecurityCbindingsVersion")
 }
 
-val patternList = mutableListOf<String>("**/inspector.proto")
+val patternList = mutableListOf<String>("api-inspection/**/*.proto")
 tasks.register<Copy>("copyDependencies") {
-  dependsOn(apiDefintionApiProto)
-  from({ apiDefintionApiProto.map { zipTree(it).matching{include(patternList)} } })
+  dependsOn(apiInspectionApiProto)
+  from({ apiInspectionApiProto.map { zipTree(it).matching{include(patternList)} } })
   eachFile {
     relativePath = RelativePath(true, *relativePath.segments.drop(0).toTypedArray())
   }
@@ -50,6 +53,16 @@ protobuf {
       }
     }
   }
+}
+
+tasks.register<Copy>("copyModsecurityCbindingFiles") {
+  dependsOn(modsecurityCbindingFiles)
+  from({ modsecurityCbindingFiles.map { zipTree(it) } })
+  eachFile {
+    relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
+  }
+  includeEmptyDirs = false
+  into("$buildDir/modsec")
 }
 
 traceableDocker {

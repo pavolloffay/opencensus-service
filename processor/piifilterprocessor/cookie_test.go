@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -29,7 +29,7 @@ func Test_piifilterprocessor_cookie_setcookie_FilterKey(t *testing.T) {
 func filterCookie(t *testing.T, key string, cookieStr string, expected string) {
 	gomega.RegisterTestingT(t)
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -42,8 +42,8 @@ func filterCookie(t *testing.T, key string, cookieStr string, expected string) {
 	filter := newCookieFilter(pfp.(*piifilterprocessor), logger)
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	isErr, filtered := filter.Filter(cookieStr, key, filterData)
 	assert.False(t, isErr)

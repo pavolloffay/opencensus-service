@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -17,7 +17,7 @@ func Test_piifilterprocessor_urlencoded_FilterKey(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -33,8 +33,8 @@ func Test_piifilterprocessor_urlencoded_FilterKey(t *testing.T) {
 	v.Add("password", "mypw$")
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	isErr, filtered := filter.Filter(v.Encode(), "password", filterData)
 	assert.False(t, isErr)
@@ -51,7 +51,7 @@ func Test_piifilterprocessor_urlencoded_FilterKey_URL(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -65,8 +65,8 @@ func Test_piifilterprocessor_urlencoded_FilterKey_URL(t *testing.T) {
 	str := "http://traceshop.dev/login?username=george&password=washington"
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	isErr, filtered := filter.Filter(str, "http.url", filterData)
 	assert.False(t, isErr)
@@ -87,7 +87,7 @@ func Test_piifilterprocessor_urlencoded_FailParsing_URL(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -101,8 +101,8 @@ func Test_piifilterprocessor_urlencoded_FailParsing_URL(t *testing.T) {
 	str := "http://x:namedport"
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	isErr, filtered := filter.Filter(str, "http.url", filterData)
 	assert.True(t, isErr)
@@ -113,7 +113,7 @@ func Test_piifilterprocessor_urlencoded_FilterValue(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		ValueRegExs: []PiiElement{
 			{
 				Regex:    "^filter_value$",
@@ -129,8 +129,8 @@ func Test_piifilterprocessor_urlencoded_FilterValue(t *testing.T) {
 	v.Add("key2", "value2")
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	isErr, filtered := filter.Filter(v.Encode(), "", filterData)
 	assert.False(t, isErr)

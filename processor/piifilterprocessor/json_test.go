@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/census-instrumentation/opencensus-service/exporter/exportertest"
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-definition/ai/traceable/platform/apidefinition/v1"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	"github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/assert"
@@ -79,7 +79,7 @@ func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr boo
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
-	config := &PiiFilter{HashValue: false,
+	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
 				Regex:    "^password$",
@@ -91,8 +91,8 @@ func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr boo
 	filter := newJSONFilter(pfp.(*piifilterprocessor), logger)
 
 	filterData := &FilterData{
-		DlpElements:             list.New(),
-		ApiDefinitionInspection: &pb.ApiDefinitionInspection{},
+		DlpElements:    list.New(),
+		RedactedValues: make(map[string][]*inspector.Value),
 	}
 	err, filtered := filter.Filter(input, "attrib_key", filterData)
 	assert.Equal(t, expectedErr, err)
