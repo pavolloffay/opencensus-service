@@ -51,10 +51,10 @@ spec:
             - "--logging-exporter"
             - "--log-level={{ .Values.logLevel }}"
           ports:
-            - name: grpc-opencensus
-              containerPort: {{ .Values.containerPortOpencensus }}
-            - name: http-jaeger
-              containerPort: {{ .Values.containerPortJaeger }}
+          {{ range $port := .Values.containerPorts }}
+            - name: {{ $port.name }}
+              containerPort: {{ $port.containerPort }}
+          {{ end }}
         {{- with .Values.env }}
           env:
           {{- toYaml . | nindent 12}}
