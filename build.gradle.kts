@@ -92,7 +92,7 @@ traceableDocker {
   }
 }
 
-tasks.named("dockerBuildImages") {
+tasks.named("dockerBuildImage_default") {
   dependsOn("copyModsecurityCbindingFiles")
   dependsOn("copyModsecurityCrsFiles")
 }
