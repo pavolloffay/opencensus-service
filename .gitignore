@@ -26,3 +26,5 @@ coverage.html
 .gradle
 build/**
 deployments/artifacts/**
+helm/Chart.lock
+helm/charts/
