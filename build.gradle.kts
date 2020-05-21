@@ -10,14 +10,18 @@ plugins {
 
 group = "ai.traceable.agent"
 
+var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").toString()
+
 val protobufVersion = "3.11.4"
 val apiInspectionApiVersion = "0.1.69"
 val apiInspectionApiProto: Configuration by configurations.creating
-val modsecurityCbindingsVersion = "0.1.28"
+val modsecurityCbindingsVersion = "0.1.29"
 val modsecurityCbindingFiles: Configuration by configurations.creating
+val modsecurityConfigFiles: Configuration by configurations.creating
 dependencies {
   apiInspectionApiProto("ai.traceable.platform:api-inspection-api:$apiInspectionApiVersion")
   modsecurityCbindingFiles("ai.traceable.platform:modsecurity-cbindings:$modsecurityCbindingsVersion")
+  modsecurityConfigFiles("ai.traceable.platform:modsecurity-config:$modsecurityCbindingsVersion")
 }
 
 val patternList = mutableListOf<String>("api-inspection/**/*.proto")
@@ -62,12 +66,33 @@ tasks.register<Copy>("copyModsecurityCbindingFiles") {
     relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
   }
   includeEmptyDirs = false
-  into("$buildDir/modsec")
+  into("$artifactPath/modsec")
+}
+
+tasks.register<Copy>("copyModsecurityMainConfig") {
+  from("modsec/rules")
+  into("$artifactPath/config")
+}
+
+tasks.register<Copy>("copyModsecurityCrsFiles") {
+  dependsOn(modsecurityConfigFiles)
+  dependsOn("copyModsecurityMainConfig")
+  from({ modsecurityConfigFiles.map { zipTree(it) } })
+  eachFile {
+    relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray())
+  }
+  includeEmptyDirs = false
+  into("$artifactPath/config")
 }
 
 traceableDocker {
   defaultImage {
     imageName.set("$group/oc-collector")
-    dockerFile.set(file("cmd/occollector/Dockerfile"))
+    dockerFile.set(file("deployments/Dockerfile"))
   }
+}
+
+tasks.named("dockerBuildImage_default") {
+  dependsOn("copyModsecurityCbindingFiles")
+  dependsOn("copyModsecurityCrsFiles")
 }

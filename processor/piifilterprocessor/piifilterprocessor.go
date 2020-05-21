@@ -37,11 +37,11 @@ const (
 
 // PiiFilter identifies configuration for PII filtering
 type PiiElement struct {
-	Regex     string `mapstructure:"regex"`
-	Category  string `mapstructure:"category"`
-	RedactStr string `mapstructure:"redaction-strategy"`
-	Redact    RedactionStrategy
-	Fqn       *bool `mapstructure:"fqn,omitempty"`
+	Regex          string `mapstructure:"regex"`
+	Category       string `mapstructure:"category"`
+	RedactStrategy string `mapstructure:"redaction-strategy"`
+	Redact         RedactionStrategy
+	Fqn            *bool `mapstructure:"fqn,omitempty"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -61,8 +61,8 @@ type DlpElement struct {
 
 type PiiFilter struct {
 	// Global redaction strategy. Defaults to Redact
-	RedactStr string `mapstructure:"redaction-strategy"`
-	Redact    RedactionStrategy
+	RedactStrategy string `mapstructure:"redaction-strategy"`
+	Redact         RedactionStrategy
 	// Prefixes attribute name prefix to match the keyword against
 	Prefixes []string `mapstructure:"prefixes"`
 	// // Keywords are the attribute name of which the value will be filtered
@@ -104,7 +104,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, filter *PiiFilter, l
 		return nil, errors.New("nextConsumer is nil")
 	}
 
-	filter.Redact = toId(filter.RedactStr)
+	filter.Redact = toId(filter.RedactStrategy)
 
 	var globalRedactionStrategy RedactionStrategy
 	if int(filter.Redact) == 0 {
@@ -168,7 +168,7 @@ func compileRegexs(regexs []PiiElement, globalRedactionStrategy RedactionStrateg
 			return nil, fmt.Errorf("error compiling key regex %s already specified", elem.Regex)
 		}
 
-		elem.Redact = toId(elem.RedactStr)
+		elem.Redact = toId(elem.RedactStrategy)
 		if int(elem.Redact) == 0 {
 			elem.Redact = globalRedactionStrategy
 		}
