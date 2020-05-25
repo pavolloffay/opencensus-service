@@ -30,10 +30,10 @@ func NewValue(originalValue string, redacted string, isRedacted bool) *Value {
 		ValueProto:    &pb.Value{},
 	}
 
-	val.ValueProto.Value = redacted
 	if isRedacted {
 		val.ValueProto.ValueType = pb.ValueType_VALUE_TYPE_REDACTED
 	} else {
+		val.ValueProto.Value = redacted
 		val.ValueProto.ValueType = pb.ValueType_VALUE_TYPE_HASHED
 	}
 	return val

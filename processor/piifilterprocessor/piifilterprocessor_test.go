@@ -164,7 +164,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Gh8KCHBhc3N3b3JkEhMKERIPCgcKAyoqKhADEAUYBiIA"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "GhoKCHBhc3N3b3JkEg4KDBIKCgIQAxAFGAYiAA=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"Key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
@@ -254,7 +254,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IiMKDFJFUVVFU1RfQk9EWRITChESDwoHCgMqKioQAxAFGBMiAA=="}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih4KDFJFUVVFU1RfQk9EWRIOCgwSCgoCEAMQBRgTIgA="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.body\",\"path\":\"\",\"type\":\"pci\"}]"}},
@@ -368,7 +368,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Gh8KCHBhc3N3b3JkEhMKERIPCgcKAyoqKhADEAUYBiIA"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "GhoKCHBhc3N3b3JkEg4KDBIKCgIQAxAFGAYiAA=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"},{\"key\":\"password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},
@@ -597,7 +597,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(valueJsonExpected)}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IiUKDmtleV9vcl92YWx1ZS5iEhMKERIPCgcKAyoqKhADEAUYDCIA"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IiAKDmtleV9vcl92YWx1ZS5iEg4KDBIKCgIQAxAFGAwiAA=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueJsonInputExpectedDlp}},
@@ -651,7 +651,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(invalidJsonExpected)}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IjYKDFJFUVVFU1RfQk9EWRImChESDwoHCgMqKioQAxAFGAwiAAoREg8KBwoDKioqEAMQBRgMIgA="}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "IiwKDFJFUVVFU1RfQk9EWRIcCgwSCgoCEAMQBRgMIgAKDBIKCgIQAxAFGAwiAA=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.body\",\"path\":\"\",\"type\":\"pii\"}]"}},
