@@ -4,7 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
+
 	"go.uber.org/zap"
 )
 
@@ -49,13 +50,13 @@ func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, v
 
 	switch {
 	case isBool(value.OriginalValue):
-		paramType = pb.ParamValueType_BOOLEAN
+		paramType = pb.ParamValueType_PARAM_VALUE_TYPE_BOOLEAN
 	case isInteger(value.OriginalValue):
-		paramType = pb.ParamValueType_INTEGER
+		paramType = pb.ParamValueType_PARAM_VALUE_TYPE_INTEGER
 	case isFloat(value.OriginalValue):
-		paramType = pb.ParamValueType_FLOAT
+		paramType = pb.ParamValueType_PARAM_VALUE_TYPE_FLOAT
 	default:
-		paramType = pb.ParamValueType_STRING
+		paramType = pb.ParamValueType_PARAM_VALUE_TYPE_STRING
 	}
 
 	message.MetadataInspection.Type = paramType

@@ -3,7 +3,8 @@ package inspector
 import (
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
+
 	"go.uber.org/zap"
 )
 
@@ -31,9 +32,9 @@ func NewValue(originalValue string, redacted string, isRedacted bool) *Value {
 
 	val.ValueProto.Value = redacted
 	if isRedacted {
-		val.ValueProto.ValueType = pb.ValueType_REDACTED
+		val.ValueProto.ValueType = pb.ValueType_VALUE_TYPE_REDACTED
 	} else {
-		val.ValueProto.ValueType = pb.ValueType_HASHED
+		val.ValueProto.ValueType = pb.ValueType_VALUE_TYPE_HASHED
 	}
 	return val
 }

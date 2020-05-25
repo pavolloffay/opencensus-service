@@ -65,7 +65,7 @@ func Test_piifilterprocessor_modsec_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih8KCHBhc3N3b3JkEhMKERIPCgcKAyoqKhACEAUYCCIASggKBgoCMjAgAQ=="}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Gh8KCHBhc3N3b3JkEhMKERIPCgcKAyoqKhADEAUYCCIASggKBgoCMjAgAQ=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.password\",\"path\":\"\",\"type\":\"sensitive\"}]"}},

@@ -13,9 +13,9 @@ group = "ai.traceable.agent"
 var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").toString()
 
 val protobufVersion = "3.11.4"
-val apiInspectionApiVersion = "0.1.69"
+val apiInspectionApiVersion = "0.1.83"
 val apiInspectionApiProto: Configuration by configurations.creating
-val modsecurityCbindingsVersion = "0.1.29"
+val modsecurityCbindingsVersion = "0.1.30"
 val modsecurityCbindingFiles: Configuration by configurations.creating
 val modsecurityConfigFiles: Configuration by configurations.creating
 dependencies {
@@ -24,7 +24,7 @@ dependencies {
   modsecurityConfigFiles("ai.traceable.platform:modsecurity-config:$modsecurityCbindingsVersion")
 }
 
-val patternList = mutableListOf<String>("api-inspection/**/*.proto")
+val patternList = mutableListOf<String>("**/*.proto")
 tasks.register<Copy>("copyDependencies") {
   dependsOn(apiInspectionApiProto)
   from({ apiInspectionApiProto.map { zipTree(it).matching{include(patternList)} } })
