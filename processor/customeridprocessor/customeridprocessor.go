@@ -1,4 +1,4 @@
-package tenantidprocessor
+package customeridprocessor
 
 import (
 	"context"
@@ -16,47 +16,47 @@ import (
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
-type tenantidprocessor struct {
+type customeridprocessor struct {
 	nextConsumer consumer.TraceConsumer
 	logger       *zap.Logger
 }
 
 const (
-	tenantIDHTTPHeaderKey = "x-tenant-id"
-	tenantIDSpanTagKey    = "tenant-id"
+	customerIDHTTPHeaderKey = "x-traceable-customer-id"
+	customerIDSpanTagKey    = "traceable.customer_id"
 )
 
-// NewTraceProcessor reads the tenant ID from the HTTP/GRPC headers in the ctx and adds it to every span.
-// If for whatever reason, we could not read the tenant ID, we return an error and drop
+// NewTraceProcessor reads the customer ID from the HTTP/GRPC headers in the ctx and adds it to every span.
+// If for whatever reason, we could not read the customer ID, we return an error and drop
 // the spans. Having this consumer enabled ensures that all spans that pass through are
-// annotated with the tenant ID.
+// annotated with the customer ID.
 func NewTraceProcessor(nextConsumer consumer.TraceConsumer, logger *zap.Logger) (processor.TraceProcessor, error) {
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
 	}
 
-	return &tenantidprocessor{
+	return &customeridprocessor{
 		nextConsumer: nextConsumer,
 		logger:       logger,
 	}, nil
 }
 
-func (processor *tenantidprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
-	// Read the tenant ID from the headers
-	tenantID := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+func (processor *customeridprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
+	// Read the customer ID from the headers
+	customerID := processor.readHeaderFromContext(ctx, customerIDHTTPHeaderKey)
 
-	if tenantID == "" {
-		processor.logger.Warn(fmt.Sprintf("%s HTTP header not found. Dropping spans. TenantID not found.", tenantIDHTTPHeaderKey))
-		return errors.New("Tenant ID not found in ctx argument passed in")
+	if customerID == "" {
+		processor.logger.Warn(fmt.Sprintf("%s HTTP header not found. Dropping spans. CustomerID not found.", customerIDHTTPHeaderKey))
+		return errors.New("Customer ID not found in ctx argument passed in")
 	}
 
-	addTenantIDToSpans(td.Spans, tenantID)
+	addCustomerIDToSpans(td.Spans, customerID)
 
 	return processor.nextConsumer.ConsumeTraceData(ctx, td)
 }
 
-// tenantID should not be an empty string.
-func addTenantIDToSpans(spans []*tracepb.Span, tenantID string) {
+// customerID should not be an empty string.
+func addCustomerIDToSpans(spans []*tracepb.Span, customerID string) {
 	for _, span := range spans {
 		if span == nil {
 			continue
@@ -72,11 +72,11 @@ func addTenantIDToSpans(spans []*tracepb.Span, tenantID string) {
 			span.Attributes.AttributeMap = make(map[string]*tracepb.AttributeValue)
 		}
 
-		addHeaderToSpanAttributes(span, tenantIDSpanTagKey, tenantID)
+		addHeaderToSpanAttributes(span, customerIDSpanTagKey, customerID)
 	}
 }
 
-func (processor *tenantidprocessor) readHeaderFromContext(ctx context.Context, headerName string) string {
+func (processor *customeridprocessor) readHeaderFromContext(ctx context.Context, headerName string) string {
 	_, ok := ctx.(thrift.Context)
 	if !ok { // Not thrift headers
 		// Try GRPC for oc channel
@@ -93,7 +93,7 @@ func (processor *tenantidprocessor) readHeaderFromContext(ctx context.Context, h
 	return headers.Get(headerName)
 }
 
-func (processor *tenantidprocessor) readHeaderFromGrpcContext(ctx context.Context, headerName string) string {
+func (processor *customeridprocessor) readHeaderFromGrpcContext(ctx context.Context, headerName string) string {
 	headers, ok := grpcmetadata.FromIncomingContext(ctx)
 	if !ok {
 		processor.logger.Warn("Could not read grpc metadata from the context")
