@@ -1,4 +1,4 @@
-package customeridprocessor
+package tenantidprocessor
 
 import (
 	"context"
@@ -17,13 +17,13 @@ import (
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
-var testCustomerID = "test-customer-id"
+var testTenantID = "test-tenant-id"
 
 func TestHeadersInThriftContext(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := make(http.Header)
-	headers.Add(customerIDHTTPHeaderKey, testCustomerID)
+	headers.Add(tenantIDHTTPHeaderKey, testTenantID)
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -35,13 +35,13 @@ func TestHeadersInThriftContext(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
-	extractedCustomerIDHeader := processor.readHeaderFromContext(ctx, customerIDHTTPHeaderKey)
-	gomega.Expect(extractedCustomerIDHeader).Should(gomega.Equal(testCustomerID))
+	extractedTenantIDHeader := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+	gomega.Expect(extractedTenantIDHeader).Should(gomega.Equal(testTenantID))
 }
 
-func TestNoCustomerIDHeaderInThriftContext(t *testing.T) {
+func TestNoTenantIDHeaderInThriftContext(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := make(http.Header)
@@ -57,10 +57,10 @@ func TestNoCustomerIDHeaderInThriftContext(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
-	extractedCustomerIDHeader := processor.readHeaderFromContext(ctx, customerIDHTTPHeaderKey)
-	gomega.Expect(extractedCustomerIDHeader).Should(gomega.Equal(""))
+	extractedTenantIDHeader := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+	gomega.Expect(extractedTenantIDHeader).Should(gomega.Equal(""))
 }
 
 func TestNoThriftRequestHeadersInThriftCtx(t *testing.T) {
@@ -75,7 +75,7 @@ func TestNoThriftRequestHeadersInThriftCtx(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
 	err = processor.ConsumeTraceData(ctx, testSpans)
 	gomega.Expect(err).ShouldNot(gomega.BeNil())
@@ -89,7 +89,7 @@ func TestHeadersInGrpcContext(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := map[string][]string{
-		customerIDHTTPHeaderKey: []string{testCustomerID},
+		tenantIDHTTPHeaderKey: []string{testTenantID},
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -101,13 +101,13 @@ func TestHeadersInGrpcContext(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
-	extractedCustomerIDHeader := processor.readHeaderFromContext(ctx, customerIDHTTPHeaderKey)
-	gomega.Expect(extractedCustomerIDHeader).Should(gomega.Equal(testCustomerID))
+	extractedTenantIDHeader := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+	gomega.Expect(extractedTenantIDHeader).Should(gomega.Equal(testTenantID))
 }
 
-func TestHeadersNoCustomerIDInGrpcContext(t *testing.T) {
+func TestHeadersNoTenantIDInGrpcContext(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := map[string][]string{
@@ -123,10 +123,10 @@ func TestHeadersNoCustomerIDInGrpcContext(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
-	extractedCustomerIDHeader := processor.readHeaderFromContext(ctx, customerIDHTTPHeaderKey)
-	gomega.Expect(extractedCustomerIDHeader).Should(gomega.Equal(""))
+	extractedTenantIDHeader := processor.readHeaderFromContext(ctx, tenantIDHTTPHeaderKey)
+	gomega.Expect(extractedTenantIDHeader).Should(gomega.Equal(""))
 }
 
 func TestHeadersSomeUnknownContext(t *testing.T) {
@@ -140,17 +140,17 @@ func TestHeadersSomeUnknownContext(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
-	extractedCustomerIDHeader := processor.readHeaderFromContext(timeoutCtx, customerIDHTTPHeaderKey)
-	gomega.Expect(extractedCustomerIDHeader).Should(gomega.Equal(""))
+	extractedTenantIDHeader := processor.readHeaderFromContext(timeoutCtx, tenantIDHTTPHeaderKey)
+	gomega.Expect(extractedTenantIDHeader).Should(gomega.Equal(""))
 }
 
-func TestCustomerIDFromHeaderAddedToSpans(t *testing.T) {
+func testTenantIDFromHeaderAddedToSpans(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := make(http.Header)
-	headers.Add(customerIDHTTPHeaderKey, testCustomerID)
+	headers.Add(tenantIDHTTPHeaderKey, testTenantID)
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -162,7 +162,7 @@ func TestCustomerIDFromHeaderAddedToSpans(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
 	err = processor.ConsumeTraceData(ctx, testSpans)
 	gomega.Expect(err).Should(gomega.BeNil())
@@ -172,11 +172,11 @@ func TestCustomerIDFromHeaderAddedToSpans(t *testing.T) {
 	}
 }
 
-func TestCustomerIDFromHeaderAddedToSpansWithoutAttributes(t *testing.T) {
+func testTenantIDFromHeaderAddedToSpansWithoutAttributes(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := make(http.Header)
-	headers.Add(customerIDHTTPHeaderKey, testCustomerID)
+	headers.Add(tenantIDHTTPHeaderKey, testTenantID)
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -188,7 +188,7 @@ func TestCustomerIDFromHeaderAddedToSpansWithoutAttributes(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
 	err = processor.ConsumeTraceData(ctx, testSpansNoAttributes)
 	gomega.Expect(err).Should(gomega.BeNil())
@@ -198,11 +198,11 @@ func TestCustomerIDFromHeaderAddedToSpansWithoutAttributes(t *testing.T) {
 	}
 }
 
-func TestCustomerIDFromHeaderAddedToSpansWithoutAttributesMap(t *testing.T) {
+func testTenantIDFromHeaderAddedToSpansWithoutAttributesMap(t *testing.T) {
 	gomega.RegisterTestingT(t)
 
 	headers := make(http.Header)
-	headers.Add(customerIDHTTPHeaderKey, testCustomerID)
+	headers.Add(tenantIDHTTPHeaderKey, testTenantID)
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -214,7 +214,7 @@ func TestCustomerIDFromHeaderAddedToSpansWithoutAttributesMap(t *testing.T) {
 	iProcessor, err := NewTraceProcessor(sinkExporter, logger)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	processor := iProcessor.(*customeridprocessor)
+	processor := iProcessor.(*tenantidprocessor)
 
 	err = processor.ConsumeTraceData(ctx, testSpansNoAttributesMap)
 	gomega.Expect(err).Should(gomega.BeNil())

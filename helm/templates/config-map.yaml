@@ -8,3 +8,4 @@ metadata:
 data:
   oc-collector-config: |-
     {{- toYaml .Values.configMap.data | nindent 4 }}
+
