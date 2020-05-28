@@ -36,54 +36,79 @@ func Test_piifilterprocessor_json_StringConversion(t *testing.T) {
 func Test_piifilterprocessor_json_OuterArrayFilter(t *testing.T) {
 	input := "[{\"a\": \"1\"},{\"password\": \"abc\"}]"
 	expected := "[{\"a\": \"1\"},{\"password\": \"***\"}]"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
 func Test_piifilterprocessor_json_InnerArrayFilter(t *testing.T) {
 	input := "{\"a\": [{\"b\": \"1\"}, {\"password\": \"abc\"}]}"
 	expected := "{\"a\": [{\"b\": \"1\"}, {\"password\": \"***\"}]}"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
 func Test_piifilterprocessor_json_ArrayInKeyFilter(t *testing.T) {
 	input := "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"12\",\"34\",\"56\"]}]}"
 	expected := "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"***\",\"***\",\"***\"]}]}"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
 func Test_piifilterprocessor_json_ObjectInKeyFilter(t *testing.T) {
 	input := "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[\"12\",\"34\",\"56\"], \"key2\":\"val\"}}]}"
 	expected := "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
 func Test_piifilterprocessor_json_NonStringScalarFilter(t *testing.T) {
 	input := "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34.1,true], \"key2\":false}}]}"
 	expected := "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"***\"}}]}"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
 func Test_piifilterprocessor_json_SimpleArrayFilter(t *testing.T) {
 	input := "[\"12\",\"34\",\"56\"]"
 	expected := "[\"12\",\"34\",\"56\"]"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^password$", "sensitive", false, false, true)
 }
 
-func Test_piifilterprocessor_json_MapFilter(t *testing.T) {
+func Test_piifilterprocessor_json_ArrayInKeyFilter_fqn(t *testing.T) {
+	input := "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"12\",\"34\",\"56\"]}]}"
+	expected1 := "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"***\",\"***\",\"***\"]}]}"
+	filterJSON(t, input, expected1, "^\\$\\.a\\[1\\]\\.password$", "sensitive", true, false, true)
+
+	expected2 := "{\"a\": [{\"b\": \"1\"}, {\"password\": [\"12\",\"***\",\"56\"]}]}"
+	filterJSON(t, input, expected2, "^\\$\\.a\\[1\\]\\.password\\[1\\]$", "sensitive", true, false, true)
+}
+
+func Test_piifilterprocessor_json_ObjectInKeyFilter_fqn(t *testing.T) {
+	input := "{\"a\": [{\"b\": \"1\"}, {\"password\":{\"key1\":[12,34,56], \"key2\":\"val\"}}]}"
+	expected1 := "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[\"***\",\"***\",\"***\"], \"key2\":\"val\"}}]}"
+	filterJSON(t, input, expected1, "^\\$\\.a\\[1\\]\\.password.key1$", "sensitive", true, false, true)
+
+	expected2 := "{\"a\": [{\"b\": \"1\"}, {\"password\": {\"key1\":[12,\"***\",56], \"key2\":\"val\"}}]}"
+	filterJSON(t, input, expected2, "^\\$\\.a\\[1\\]\\.password.key1\\[1\\]$", "sensitive", true, false, true)
+}
+
+func Test_piifilterprocessor_json_SimpleArrayFilter_fqn(t *testing.T) {
+	input := "[\"12\",\"34\",\"56\"]"
+	expected := "[\"12\",\"***\",\"56\"]"
+	filterJSON(t, input, expected, "^\\$\\[1\\]$", "sensitive", true, false, true)
+}
+
+func Test_piifilterprocessor_json_ObjectFilter_fqn(t *testing.T) {
 	input := "{\"a\": \"1\",\"password\": \"abc\"}"
 	expected := "{\"a\": \"1\",\"password\": \"***\"}"
-	filterJSON(t, input, expected, false, true)
+	filterJSON(t, input, expected, "^\\$\\.password$", "sensitive", true, false, true)
 }
 
-func filterJSON(t *testing.T, input string, expectedJSON string, expectedErr bool, expectedFiltered bool) {
+func filterJSON(t *testing.T, input, expectedJSON, regex, category string, fqn bool, expectedErr bool, expectedFiltered bool) {
 	gomega.RegisterTestingT(t)
 
 	logger := zap.New(zapcore.NewNopCore())
 	config := &PiiFilter{Redact: Redact,
 		KeyRegExs: []PiiElement{
 			{
-				Regex:    "^password$",
-				Category: "sensitive",
+				Regex:    regex,
+				Category: category,
+				Fqn:      &fqn,
 			},
 		},
 	}
