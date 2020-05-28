@@ -1,4 +1,4 @@
-package customeridprocessor
+package tenantidprocessor
 
 import (
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -40,8 +40,8 @@ var expectedSpans = []data.TraceData{
 						"tag1": {
 							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "abc123"}},
 						},
-						customerIDSpanTagKey: {
-							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-customer-id"}},
+						tenantIDSpanTagKey: {
+							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-tenant-id"}},
 						},
 					},
 				},
@@ -53,8 +53,8 @@ var expectedSpans = []data.TraceData{
 						"tag2": {
 							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "def456"}},
 						},
-						customerIDSpanTagKey: {
-							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-customer-id"}},
+						tenantIDSpanTagKey: {
+							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-tenant-id"}},
 						},
 					},
 				},
@@ -94,8 +94,8 @@ var expectedSpansForNoAttributesSpans = []data.TraceData{
 				Name: &tracepb.TruncatableString{Value: "span1"},
 				Attributes: &tracepb.Span_Attributes{
 					AttributeMap: map[string]*tracepb.AttributeValue{
-						customerIDSpanTagKey: {
-							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-customer-id"}},
+						tenantIDSpanTagKey: {
+							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-tenant-id"}},
 						},
 					},
 				},
@@ -104,8 +104,8 @@ var expectedSpansForNoAttributesSpans = []data.TraceData{
 				Name: &tracepb.TruncatableString{Value: "span2"},
 				Attributes: &tracepb.Span_Attributes{
 					AttributeMap: map[string]*tracepb.AttributeValue{
-						customerIDSpanTagKey: {
-							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-customer-id"}},
+						tenantIDSpanTagKey: {
+							Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "test-tenant-id"}},
 						},
 					},
 				},
