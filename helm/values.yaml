@@ -112,7 +112,7 @@ configMap:
         topic: "jaeger-spans"
     global:
       attributes:
-        customerid-reader-enabled: true
+        tenantid-reader-enabled: true
 
 kafka-topic-creator:
   jobName: jaeger-spans-kafka-topic-creator
