@@ -1,3 +1,5 @@
+//+build collector_modsec
+
 package modsec
 
 /*

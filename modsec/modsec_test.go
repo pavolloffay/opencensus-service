@@ -1,9 +1,12 @@
+//+build collector_modsec
+
 package modsec
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_ModsecLib_ruleMatchVerification(t *testing.T) {
