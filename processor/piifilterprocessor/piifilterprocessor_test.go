@@ -41,9 +41,9 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		{"password":"***"}
 	]}`)
 
-	jsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"http.request.body\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"http.request.body\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
+	jsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
 	valueJsonInput := []byte(`{
 	"key_or_value":{
@@ -59,12 +59,12 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		}
 	}`)
 
-	valueJsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"key_or_value.b\",\"type\":\"pii\"}]"
+	valueJsonInputExpectedDlp := "[{\"key\":\"http.request.body\",\"path\":\"$.key_or_value.b\",\"type\":\"pii\"}]"
 
 	multipleAttrsExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
-		"{\"key\":\"http.request.body\",\"path\":\"password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"http.request.body\",\"path\":\"b.password\",\"type\":\"sensitive\"}," +
-		"{\"key\":\"http.request.body\",\"path\":\"c.password\",\"type\":\"sensitive\"}]"
+		"{\"key\":\"http.request.body\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.request.body\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
 	invalidJsonInput := []byte(`{
 	"key_or_value":{
