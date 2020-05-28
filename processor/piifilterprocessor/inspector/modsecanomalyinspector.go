@@ -5,7 +5,8 @@ package inspector
 import (
 	"strconv"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
+
 	"github.com/census-instrumentation/opencensus-service/modsec"
 	"go.uber.org/zap"
 )

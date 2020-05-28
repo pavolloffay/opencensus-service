@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
 	proto "github.com/golang/protobuf/proto"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"

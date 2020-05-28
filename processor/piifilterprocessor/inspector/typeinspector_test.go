@@ -3,7 +3,8 @@ package inspector
 import (
 	"testing"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
+
 	"github.com/stretchr/testify/assert"
 
 	"go.uber.org/zap"
@@ -18,7 +19,7 @@ func Test_typeinspector_int(t *testing.T) {
 
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "32"})
 
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_INTEGER)
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_INTEGER)
 }
 
 func Test_typeinspector_float(t *testing.T) {
@@ -29,7 +30,7 @@ func Test_typeinspector_float(t *testing.T) {
 
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "32.1"})
 
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_FLOAT)
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_FLOAT)
 }
 
 func Test_typeinspector_bool(t *testing.T) {
@@ -40,7 +41,7 @@ func Test_typeinspector_bool(t *testing.T) {
 
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "true"})
 
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_BOOLEAN)
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_BOOLEAN)
 }
 
 func Test_typeinspector_string(t *testing.T) {
@@ -51,5 +52,5 @@ func Test_typeinspector_string(t *testing.T) {
 
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "value"})
 
-	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_STRING)
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_STRING)
 }

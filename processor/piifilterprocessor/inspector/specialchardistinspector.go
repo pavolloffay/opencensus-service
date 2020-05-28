@@ -3,7 +3,7 @@ package inspector
 import (
 	"strings"
 
-	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/api-inspection/ai/traceable/platform/apiinspection/v1"
+	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
 	jsoniter "github.com/json-iterator/go"
 
 	"go.uber.org/zap"
