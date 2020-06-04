@@ -28,4 +28,4 @@ appVersion: 0.1.0
 dependencies:
   - name: kafka-topic-creator
     repository: "@traceable"
-    version: 0.1.0
+    version: 0.1.3
