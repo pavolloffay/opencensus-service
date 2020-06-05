@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -195,19 +196,19 @@ func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value strin
 		user := new(user)
 		for _, claim := range enduser.IDClaims {
 			if id, ok := claims[claim]; ok {
-				user.id = id.(string)
+				user.id = processor.claimToString(id)
 				break
 			}
 		}
 		for _, claim := range enduser.RoleClaims {
 			if role, ok := claims[claim]; ok {
-				user.role = role.(string)
+				user.role = processor.claimToString(role)
 				break
 			}
 		}
 		for _, claim := range enduser.ScopeClaims {
 			if scope, ok := claims[claim]; ok {
-				user.scope = scope.(string)
+				user.scope = processor.claimToString(scope)
 				break
 			}
 		}
@@ -233,6 +234,16 @@ func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value strin
 	}
 
 	return nil
+}
+
+func (processor *enduserprocessor) claimToString(claim interface{}) string {
+	json, err := json.Marshal(claim)
+	if err != nil {
+		processor.logger.Info("invalid claim", zap.Error(err))
+		return ""
+	}
+
+	return string(json)
 }
 
 func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *user {

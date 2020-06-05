@@ -2,6 +2,7 @@ package enduserprocessor
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"net/url"
 	"testing"
 
@@ -42,9 +43,34 @@ func Test_enduser_authToken_bearer(t *testing.T) {
 
 	user := ep.authTokenCapture(endusers[0], "Bearer "+tokenString)
 	assert.NotNil(t, user)
-	assert.Equal(t, "dave", user.id)
-	assert.Equal(t, "user", user.role)
-	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, "\"dave\"", user.id)
+	assert.Equal(t, "\"user\"", user.role)
+	assert.Equal(t, "\"traceable\"", user.scope)
+}
+
+func Test_enduser_authToken_complexClaim(t *testing.T) {
+	endusers := []Enduser{Enduser{
+		Key:        "http.request.header.authorization",
+		Type:       "authtoken",
+		RoleClaims: []string{"role"},
+	}}
+
+	var complexRole interface{}
+	err := json.Unmarshal([]byte(`{"role": {"a": ["b", "c"]}}`), &complexRole)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"role": complexRole,
+	})
+	tokenString, err := token.SignedString(hmacSecret)
+	assert.Nil(t, err)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.authTokenCapture(endusers[0], "Bearer "+tokenString)
+	assert.NotNil(t, user)
+	assert.Equal(t, `{"role":{"a":["b","c"]}}`, user.role)
 }
 
 func Test_enduser_authToken_basic(t *testing.T) {
