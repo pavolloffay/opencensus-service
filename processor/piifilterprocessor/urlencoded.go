@@ -1,6 +1,7 @@
 package piifilterprocessor
 
 import (
+	"fmt"
 	"net/url"
 
 	"go.uber.org/zap"
@@ -51,13 +52,21 @@ func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterDa
 	v := url.Values{}
 	var filtered bool
 	for param, values := range params {
-		for _, value := range values {
-			matchedKey, redacted := f.pfp.filterKeyRegexs(param, key, value, param, filterData)
+		for idx, value := range values {
+			path := param
+			if !isUrlAttribute {
+				if len(values) > 1 {
+					path = fmt.Sprintf("$.%s[%d]", param, idx)
+				} else {
+					path = fmt.Sprintf("$.%s", param)
+				}
+			}
+			matchedKey, redacted := f.pfp.filterKeyRegexs(param, key, value, path, filterData)
 			if matchedKey {
 				v.Add(param, redacted)
 				filtered = true
 			} else {
-				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, key, param, filterData)
+				redacted, stringValueFiltered := f.pfp.filterStringValueRegexs(value, key, path, filterData)
 				if stringValueFiltered {
 					filtered = true
 					v.Add(param, redacted)
