@@ -416,7 +416,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"http.request.header.password": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "2ba0b47e3371abfccb29873c9a45f938316afc02c644ef9e98478893f1f5e3a739ff006fa85d8418949ee2d5ef43b64df7cc9fe8b7ca71ff1ec6c1ed1f6cf37e"}},
 									},
 									inspectorTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "GqEBCghwYXNzd29yZBKUAQqRARKOAQqFAQqAATJiYTBiNDdlMzM3MWFiZmNjYjI5ODczYzlhNDVmOTM4MzE2YWZjMDJjNjQ0ZWY5ZTk4NDc4ODkzZjFmNWUzYTczOWZmMDA2ZmE4NWQ4NDE4OTQ5ZWUyZDVlZjQzYjY0ZGY3Y2M5ZmU4YjdjYTcxZmYxZWM2YzFlZDFmNmNmMzdlEAIQBRgGIgA="}},
