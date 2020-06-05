@@ -14,6 +14,8 @@ type jsonFilter struct {
 	filteredText string
 }
 
+const jsonPathPrefix = "$"
+
 func newJSONFilter(pfp *piifilterprocessor, logger *zap.Logger) *jsonFilter {
 	return &jsonFilter{
 		pfp:    pfp,
@@ -34,7 +36,7 @@ func (f *jsonFilter) Filter(input string, key string, filterData *FilterData) (b
 		return true, false
 	}
 
-	filtered, redacted := f.filterJSON(f.json, nil, "", key, "", filterData)
+	filtered, redacted := f.filterJSON(f.json, nil, "", key, jsonPathPrefix, false, filterData)
 	f.json = redacted
 
 	return false, filtered
@@ -52,31 +54,31 @@ func (f *jsonFilter) FilteredText() string {
 	return f.filteredText
 }
 
-func (f *jsonFilter) filterJSON(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
+func (f *jsonFilter) filterJSON(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, checked bool, filterData *FilterData) (bool, interface{}) {
 	switch tt := t.(type) {
 	case []interface{}:
-		filtered, redacted := f.filterJSONArray(tt, piiElem, key, actualKey, jsonPath, filterData)
+		filtered, redacted := f.filterJSONArray(tt, piiElem, key, actualKey, jsonPath, checked, filterData)
 		return filtered, redacted
 	case map[string]interface{}:
-		filtered, redacted := f.filterJSONMap(tt, piiElem, key, actualKey, jsonPath, filterData)
+		filtered, redacted := f.filterJSONMap(tt, piiElem, key, actualKey, jsonPath, checked, filterData)
 		return filtered, redacted
 	case interface{}:
-		filtered, redacted := f.filterJSONScalar(tt, piiElem, key, actualKey, jsonPath, filterData)
+		filtered, redacted := f.filterJSONScalar(tt, piiElem, key, actualKey, jsonPath, checked, filterData)
 		return filtered, redacted
 	}
 
 	return false, t
 }
 
-func (f *jsonFilter) filterJSONArray(t []interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
-	arrJSONPath := jsonPath
-	matchedPiiElem := piiElem
+func (f *jsonFilter) filterJSONArray(t []interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, checked bool, filterData *FilterData) (bool, interface{}) {
 	filtered := false
-	if matchedPiiElem == nil {
-		_, matchedPiiElem = f.pfp.matchKeyRegexs(key, actualKey, jsonPath)
-	}
 	for i, v := range t {
-		modified, redacted := f.filterJSON(v, matchedPiiElem, key, actualKey, arrJSONPath, filterData)
+		matchedPiiElem := piiElem
+		tempJsonPath := fmt.Sprintf("%s[%d]", jsonPath, i)
+		if matchedPiiElem == nil {
+			_, matchedPiiElem = f.pfp.matchKeyRegexs(key, actualKey, tempJsonPath)
+		}
+		modified, redacted := f.filterJSON(v, matchedPiiElem, key, actualKey, tempJsonPath, true, filterData)
 		if modified {
 			t[i] = redacted
 		}
@@ -86,21 +88,17 @@ func (f *jsonFilter) filterJSONArray(t []interface{}, piiElem *PiiElement, key s
 	return filtered, t
 }
 
-func (f *jsonFilter) filterJSONMap(t map[string]interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
+func (f *jsonFilter) filterJSONMap(t map[string]interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, checked bool, filterData *FilterData) (bool, interface{}) {
 	filtered := false
 	for k, v := range t {
 		var mapJSONPath string
-		if len(jsonPath) > 0 {
-			mapJSONPath = jsonPath + "." + k
-		} else {
-			mapJSONPath = k
-		}
+		mapJSONPath = jsonPath + "." + k
 
 		matchedPiiElem := piiElem
 		if matchedPiiElem == nil {
 			_, matchedPiiElem = f.pfp.matchKeyRegexs(k, actualKey, mapJSONPath)
 		}
-		modified, redacted := f.filterJSON(v, matchedPiiElem, k, actualKey, mapJSONPath, filterData)
+		modified, redacted := f.filterJSON(v, matchedPiiElem, k, actualKey, mapJSONPath, true, filterData)
 		if modified {
 			t[k] = redacted
 		}
@@ -110,8 +108,8 @@ func (f *jsonFilter) filterJSONMap(t map[string]interface{}, piiElem *PiiElement
 	return filtered, t
 }
 
-func (f *jsonFilter) filterJSONScalar(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, filterData *FilterData) (bool, interface{}) {
-	if piiElem == nil {
+func (f *jsonFilter) filterJSONScalar(t interface{}, piiElem *PiiElement, key string, actualKey string, jsonPath string, checked bool, filterData *FilterData) (bool, interface{}) {
+	if piiElem == nil && !checked {
 		_, piiElem = f.pfp.matchKeyRegexs(key, actualKey, jsonPath)
 	}
 

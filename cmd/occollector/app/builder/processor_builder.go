@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/enduserprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 )
 
@@ -134,6 +135,7 @@ type AttributesCfg struct {
 	Overwrite             bool                                   `mapstructure:"overwrite"`
 	Values                map[string]interface{}                 `mapstructure:"values"`
 	KeyReplacements       []attributekeyprocessor.KeyReplacement `mapstructure:"key-mapping,omitempty"`
+	Endusers              []enduserprocessor.Enduser             `mapstructure:"enduser,omitempty"`
 	PiiFilter             *piifilterprocessor.PiiFilter          `mapstructure:"pii-filter,omitempty"`
 	TenantIDReaderEnabled bool                                   `mapstructure:"tenantid-reader-enabled"`
 }

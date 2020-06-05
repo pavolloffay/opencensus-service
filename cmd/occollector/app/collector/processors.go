@@ -34,6 +34,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/internal/config"
 	"github.com/census-instrumentation/opencensus-service/processor/addattributesprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
+	"github.com/census-instrumentation/opencensus-service/processor/enduserprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/tenantidprocessor"
@@ -353,6 +354,12 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			tp, err = piifilterprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.PiiFilter, logger)
 			if err != nil {
 				logger.Warn("Failed to build the PII attribute filter processor: ", zap.Error(err))
+			}
+		}
+		if len(multiProcessorCfg.Global.Attributes.Endusers) > 0 {
+			tp, err = enduserprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.Endusers, logger)
+			if err != nil {
+				logger.Warn("Failed to build the enduser processor: ", zap.Error(err))
 			}
 		}
 		if multiProcessorCfg.Global.Attributes.TenantIDReaderEnabled {
