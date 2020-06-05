@@ -98,7 +98,7 @@ func Test_piifilterprocessor_urlencoded_FailParsing_URL(t *testing.T) {
 	pfp, _ := NewTraceProcessor(exportertest.NewNopTraceExporter(), config, logger)
 	filter := newURLEncodedFilter(pfp.(*piifilterprocessor), logger)
 
-	str := "http://x:namedport"
+	str := "http://x: namedport"
 
 	filterData := &FilterData{
 		DlpElements:    list.New(),

@@ -36,7 +36,7 @@ fmt-vet-lint-test: fmt vet lint test
 
 .PHONY: test
 test:
-	CGO_ENABLED=1 GO111MODULE=on $(GOTEST) -tags=collector $(GOTEST_OPT) $(ALL_PKGS)
+	CGO_ENABLED=1 GO111MODULE=on $(GOTEST) $(GOTEST_OPT) $(ALL_PKGS)
 
 .PHONY: test-modsec
 test-modsec:
@@ -91,11 +91,11 @@ agent:
 
 .PHONY: collector
 collector:
-	GO111MODULE=on CGO_ENABLED=0 go build -tags="collector" -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
+	GO111MODULE=on CGO_ENABLED=0 go build -o ./bin/occollector_$(GOOS) $(BUILD_INFO) ./cmd/occollector
 
 .PHONY: collector-modsec
 collector-modsec:
-	GO111MODULE=on CGO_ENABLED=1 go build -tags="collector_modsec" -o ./bin/occollector_modsec_$(GOOS) $(BUILD_INFO) ./cmd/occollector
+	GO111MODULE=on CGO_ENABLED=1 go build -tags=collector_modsec -o ./bin/occollector_modsec_$(GOOS) $(BUILD_INFO) ./cmd/occollector
 
 .PHONY: unisvc
 unisvc:

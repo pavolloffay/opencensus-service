@@ -17,7 +17,7 @@ require (
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
 	github.com/census-instrumentation/opencensus-proto v0.2.1
-	github.com/dgrijalva/jwt-go v0.0.0-20161101193935-9ed569b5d1ac
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-kit/kit v0.8.0
 	github.com/gogo/googleapis v1.2.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -54,7 +54,7 @@ require (
 	github.com/uber/tchannel-go v1.10.0
 	github.com/wavefronthq/opencensus-exporter v0.0.0-20190506162721-983d7cdaceaf
 	github.com/wavefronthq/wavefront-sdk-go v0.9.2
-	github.com/yancl/opencensus-go-exporter-kafka v0.0.0-20181029030031-9c471c1bfbeb
+	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.opencensus.io v0.22.0
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0
