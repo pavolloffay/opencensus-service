@@ -43,9 +43,9 @@ func Test_enduser_authToken_bearer(t *testing.T) {
 
 	user := ep.authTokenCapture(endusers[0], "Bearer "+tokenString)
 	assert.NotNil(t, user)
-	assert.Equal(t, "dave", user.id)
-	assert.Equal(t, "user", user.role)
-	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, "\"dave\"", user.id)
+	assert.Equal(t, "\"user\"", user.role)
+	assert.Equal(t, "\"traceable\"", user.scope)
 }
 
 func Test_enduser_authToken_complexClaim(t *testing.T) {
