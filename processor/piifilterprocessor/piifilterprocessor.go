@@ -478,7 +478,7 @@ func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, val
 	val := inspector.NewValue(value, redacted, isRedacted)
 	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
 
-	return true, redactedText
+	return true, redacted
 }
 
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
