@@ -12,13 +12,16 @@ import (
 	"github.com/census-instrumentation/opencensus-service/processor"
 	"github.com/census-instrumentation/opencensus-service/receiver/jaegerreceiver"
 	"github.com/uber/tchannel-go/thrift"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
 type tenantidprocessor struct {
-	nextConsumer consumer.TraceConsumer
-	logger       *zap.Logger
+	nextConsumer  consumer.TraceConsumer
+	logger        *zap.Logger
+	tenantIDViews map[string]*view.View
 }
 
 const (
@@ -36,8 +39,9 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, logger *zap.Logger) 
 	}
 
 	return &tenantidprocessor{
-		nextConsumer: nextConsumer,
-		logger:       logger,
+		nextConsumer:  nextConsumer,
+		logger:        logger,
+		tenantIDViews: make(map[string]*view.View),
 	}, nil
 }
 
@@ -52,7 +56,37 @@ func (processor *tenantidprocessor) ConsumeTraceData(ctx context.Context, td dat
 
 	addTenantIDToSpans(td.Spans, tenantID)
 
+	stat, err := processor.getTenantStat(tenantID)
+	if err == nil {
+		numSpans := len(td.Spans)
+		stats.Record(context.Background(), stat.M(int64(numSpans)))
+	} else {
+		processor.logger.Warn("Could not get tenant stats: %s", zap.Error(err))
+	}
+
 	return processor.nextConsumer.ConsumeTraceData(ctx, td)
+}
+
+func (processor *tenantidprocessor) getTenantStat(tenandID string) (*stats.Int64Measure, error) {
+	viewTenantIDCount, ok := processor.tenantIDViews[tenandID]
+	if !ok {
+		stat := stats.Int64("tenand_id_span_count_"+tenandID, "Number of spans recieved from tenant "+tenandID, stats.UnitDimensionless)
+
+		viewTenantIDCount = &view.View{
+			Name:        stat.Name(),
+			Description: stat.Description(),
+			Measure:     stat,
+			Aggregation: view.Count(),
+			TagKeys:     nil,
+		}
+
+		if err := view.Register([]*view.View{viewTenantIDCount}...); err != nil {
+			return nil, err
+		}
+		processor.tenantIDViews[tenandID] = viewTenantIDCount
+	}
+
+	return viewTenantIDCount.Measure.(*stats.Int64Measure), nil
 }
 
 // tenantID should not be an empty string.
