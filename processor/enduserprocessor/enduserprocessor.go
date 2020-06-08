@@ -196,19 +196,19 @@ func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value strin
 		user := new(user)
 		for _, claim := range enduser.IDClaims {
 			if id, ok := claims[claim]; ok {
-				user.id = processor.claimToString(id)
+				user.id = processor.jsonToString(id)
 				break
 			}
 		}
 		for _, claim := range enduser.RoleClaims {
 			if role, ok := claims[claim]; ok {
-				user.role = processor.claimToString(role)
+				user.role = processor.jsonToString(role)
 				break
 			}
 		}
 		for _, claim := range enduser.ScopeClaims {
 			if scope, ok := claims[claim]; ok {
-				user.scope = processor.claimToString(scope)
+				user.scope = processor.jsonToString(scope)
 				break
 			}
 		}
@@ -236,7 +236,7 @@ func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value strin
 	return nil
 }
 
-func (processor *enduserprocessor) claimToString(claim interface{}) string {
+func (processor *enduserprocessor) jsonToString(claim interface{}) string {
 	json, err := json.Marshal(claim)
 	if err != nil {
 		processor.logger.Info("invalid claim", zap.Error(err))
@@ -257,21 +257,21 @@ func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *u
 	for _, path := range enduser.IDPaths {
 		id, err := jsonpath.Read(json, path)
 		if err == nil {
-			user.id = id.(string)
+			user.id = processor.jsonToString(id)
 			break
 		}
 	}
 	for _, path := range enduser.RolePaths {
 		role, err := jsonpath.Read(json, path)
 		if err == nil {
-			user.role = role.(string)
+			user.role = processor.jsonToString(role)
 			break
 		}
 	}
 	for _, path := range enduser.ScopePaths {
 		scope, err := jsonpath.Read(json, path)
 		if err == nil {
-			user.scope = scope.(string)
+			user.scope = processor.jsonToString(scope)
 			break
 		}
 	}

@@ -121,9 +121,40 @@ func Test_enduser_json(t *testing.T) {
 
 	user := ep.jsonCapture(endusers[0], jsonStr)
 	assert.NotNil(t, user)
-	assert.Equal(t, "dave", user.id)
-	assert.Equal(t, "user", user.role)
-	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, "\"dave\"", user.id)
+	assert.Equal(t, "\"user\"", user.role)
+	assert.Equal(t, "\"traceable\"", user.scope)
+}
+
+func Test_enduser_complexJson(t *testing.T) {
+	endusers := []Enduser{Enduser{
+		Key:        "http.response.body",
+		Type:       "json",
+		IDPaths:    []string{"$.userInfo.name"},
+		RolePaths:  []string{"$.userInfo.role"},
+		ScopePaths: []string{"$.userInfo.scope"},
+	}}
+	jsonStr := string(`
+	{
+			"a": "b",
+			"userInfo": {
+					"name": "dave",
+					"role": ["user", "admin"],
+					"scope": "traceable"
+			},
+			"name": "bob"
+	}`)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.jsonCapture(endusers[0], jsonStr)
+	assert.NotNil(t, user)
+	assert.Equal(t, "\"dave\"", user.id)
+	assert.Equal(t, "[\"user\",\"admin\"]", user.role)
+	assert.Equal(t, "\"traceable\"", user.scope)
 }
 
 func Test_enduser_urlencoded(t *testing.T) {
@@ -237,6 +268,6 @@ func Test_enduser_condition(t *testing.T) {
 	err = processor.ConsumeTraceData(nil, td)
 	assert.Nil(t, err)
 
-	assert.Equal(t, "match_name", spanMatch.GetAttributes().AttributeMap["enduser.id"].GetStringValue().Value)
+	assert.Equal(t, "\"match_name\"", spanMatch.GetAttributes().AttributeMap["enduser.id"].GetStringValue().Value)
 	assert.Nil(t, spanNoMatch.GetAttributes().AttributeMap["enduser.id"])
 }
