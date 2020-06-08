@@ -161,6 +161,13 @@ func jReferencesToOCProtoLinks(jrefs []*jaeger.SpanRef) *tracepb.Span_Links {
 	links := make([]*tracepb.Span_Link, 0, len(jrefs))
 
 	for _, jref := range jrefs {
+		// If Jaeger Reference has a TraceId with both the Low and High values == 0 or a spanId == 0
+		// no need to convert it since it's an invalid Reference. Seems like the jaeger go client lib
+		// is adding it for some reason. eg. in the HotRod app.
+		if (jref.TraceIdHigh == 0 && jref.TraceIdLow == 0) || (jref.SpanId == 0) {
+			fmt.Printf("%v: Jref to be converted has an empty traceId or spanId: %v\n", time.Now(), jref)
+			continue
+		}
 		var linkType tracepb.Span_Link_Type
 		if jref.RefType == jaeger.SpanRefType_CHILD_OF {
 			// Wording on OC for Span_Link_PARENT_LINKED_SPAN: The linked span is a parent of the current span.
