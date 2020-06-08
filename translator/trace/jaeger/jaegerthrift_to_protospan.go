@@ -165,7 +165,7 @@ func jReferencesToOCProtoLinks(jrefs []*jaeger.SpanRef) *tracepb.Span_Links {
 		// no need to convert it since it's an invalid Reference. Seems like the jaeger go client lib
 		// is adding it for some reason. eg. in the HotRod app.
 		if (jref.TraceIdHigh == 0 && jref.TraceIdLow == 0) || (jref.SpanId == 0) {
-			fmt.Printf("Jref to be converted has an empty traceId or spanId: %v\n", jref)
+			fmt.Printf("%v: Jref to be converted has an empty traceId or spanId: %v\n", time.Now(), jref)
 			continue
 		}
 		var linkType tracepb.Span_Link_Type
