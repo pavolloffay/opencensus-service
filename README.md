@@ -312,6 +312,24 @@ global:
         replacement: http.message
         overwrite: true # replace attribute key even if the replacement string is already a key on the span attributes
         keep: true # keep the attribute with the original key
+    enduser:
+      - key: http.request.header.authorization
+        # authtoken type can be either bearer or basic
+        type: authtoken
+        id_claims:
+          - sub
+          - client_id
+          - subject
+          - username
+      - key: http.response.body
+        type: json
+        id_paths:
+        - $.userinfo.id
+        # only parse the json body if http.url attribute
+        # matches the regex \/login
+        conditions:
+          - key: http.url
+            regex: \/login
     pii-filter:
       hash-value: true # sha3 the redacted value if true, other wise replace with '***'
       prefixes:

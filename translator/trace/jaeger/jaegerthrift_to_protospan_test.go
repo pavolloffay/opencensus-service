@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -357,4 +358,135 @@ func TestConservativeConversions(t *testing.T) {
 func jsonify(v interface{}) []byte {
 	jb, _ := json.MarshalIndent(v, "", "   ")
 	return jb
+}
+
+func TestJReferencesToOCProtoLinksConversion(t *testing.T) {
+	var jRefs []*jaeger.SpanRef
+	// valid jRef - non-zero TraceId High and Low and SpanId.
+	jRef := &jaeger.SpanRef{
+		RefType:     jaeger.SpanRefType_CHILD_OF,
+		TraceIdLow:  10,
+		TraceIdHigh: 20,
+		SpanId:      30,
+	}
+
+	jRefs = append(jRefs, jRef)
+
+	spanLinks := jReferencesToOCProtoLinks(jRefs)
+	if spanLinks == nil || spanLinks.Link == nil {
+		t.Errorf("OC SpanLinks is nil for valid jaeger refs")
+	}
+
+	if len(spanLinks.Link) != 1 {
+		t.Errorf("OC SpanLinks length for valid jaeger refs is %d instead of 1", len(spanLinks.Link))
+	}
+
+	if spanLinks.Link[0] == nil {
+		t.Errorf("OC SpanLink for valid Jaeger Ref should not be nil")
+	}
+
+	spanLink := spanLinks.Link[0]
+	if spanLink.Type != tracepb.Span_Link_PARENT_LINKED_SPAN {
+		t.Errorf("Incorrect OC SpanLink Type")
+	}
+	if !bytes.Equal(spanLink.TraceId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a}) {
+		t.Errorf("Incorrect OC SpanLink TraceId")
+	}
+
+	if !bytes.Equal(spanLink.SpanId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e}) {
+		t.Errorf("Incorrect OC SpanLink SpanId")
+	}
+
+	// Both TracedId Low and High are 0
+	var jRefs2 []*jaeger.SpanRef
+	jRef2 := &jaeger.SpanRef{
+		RefType:     jaeger.SpanRefType_CHILD_OF,
+		TraceIdLow:  0,
+		TraceIdHigh: 0,
+		SpanId:      30,
+	}
+
+	jRefs2 = append(jRefs2, jRef2)
+
+	spanLinks2 := jReferencesToOCProtoLinks(jRefs2)
+
+	if len(spanLinks2.Link) != 0 {
+		t.Errorf("OC SpanLinks length for invalid jaeger refs is %d instead of 0", len(spanLinks2.Link))
+	}
+
+	// SpanId is 0
+	var jRefs3 []*jaeger.SpanRef
+	jRef3 := &jaeger.SpanRef{
+		RefType:     jaeger.SpanRefType_CHILD_OF,
+		TraceIdLow:  10,
+		TraceIdHigh: 20,
+		SpanId:      0,
+	}
+
+	jRefs3 = append(jRefs3, jRef3)
+
+	spanLinks3 := jReferencesToOCProtoLinks(jRefs3)
+
+	if len(spanLinks3.Link) != 0 {
+		t.Errorf("OC SpanLinks length for invalid jaeger refs is %d instead of 0", len(spanLinks3.Link))
+	}
+
+	// Only TraceId High is 0
+	var jRefs4 []*jaeger.SpanRef
+	jRef4 := &jaeger.SpanRef{
+		RefType:     jaeger.SpanRefType_CHILD_OF,
+		TraceIdLow:  10,
+		TraceIdHigh: 0,
+		SpanId:      30,
+	}
+
+	jRefs4 = append(jRefs4, jRef4)
+
+	spanLinks4 := jReferencesToOCProtoLinks(jRefs4)
+
+	if len(spanLinks4.Link) != 1 {
+		t.Errorf("OC SpanLinks length for invalid jaeger refs is %d instead of 0", len(spanLinks4.Link))
+	}
+
+	spanLink4 := spanLinks4.Link[0]
+
+	if !bytes.Equal(spanLink4.TraceId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a}) {
+		t.Errorf("Incorrect OC SpanLink TraceId")
+	}
+
+	if !bytes.Equal(spanLink4.SpanId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e}) {
+		t.Errorf("Incorrect OC SpanLink SpanId")
+	}
+
+	// Only TraceId Low is 0
+	var jRefs5 []*jaeger.SpanRef
+	jRef5 := &jaeger.SpanRef{
+		RefType:     jaeger.SpanRefType_CHILD_OF,
+		TraceIdLow:  0,
+		TraceIdHigh: 25,
+		SpanId:      35,
+	}
+
+	jRefs5 = append(jRefs5, jRef5)
+
+	spanLinks5 := jReferencesToOCProtoLinks(jRefs5)
+
+	if len(spanLinks5.Link) != 1 {
+		t.Errorf("OC SpanLinks length for invalid jaeger refs is %d instead of 0", len(spanLinks5.Link))
+	}
+
+	spanLink5 := spanLinks5.Link[0]
+
+	if !bytes.Equal(spanLink5.TraceId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) {
+		t.Errorf("Incorrect OC SpanLink TraceId")
+	}
+
+	if !bytes.Equal(spanLink5.SpanId, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23}) {
+		t.Errorf("Incorrect OC SpanLink SpanId")
+	}
+
+	// nil JRefs
+	if jReferencesToOCProtoLinks(nil) != nil {
+		t.Errorf("Incorrect OC SpanLinks for nil Jeager Refs. Should be nil as well")
+	}
 }
