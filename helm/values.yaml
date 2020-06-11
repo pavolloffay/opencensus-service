@@ -120,7 +120,7 @@ kafka-topic-creator:
   kafka:
     topics:
       - name: jaeger-spans
-        replicationFactor: 2
+        replicationFactor: 3
         partitions: 8
         configs:
           - retention.bytes=4294967296
