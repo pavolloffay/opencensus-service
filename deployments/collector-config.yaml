@@ -94,39 +94,40 @@ global:
       modsec-config:
         config-dir: "/"
         file-name: "modsecurity-detector.conf"
-      complex-data:
-      - key: http.request.body
-        type-key: http.request.header.content-type
-      - key: http.response.body
-        type-key: http.response.header.content-type
-      - key: sql.query
-        type: sql
-      - key: http.url
-        type: urlencoded
-      - key: http.request.header.cookie
-        type: cookie
-      - key: http.response.header.set-cookie
-        type: cookie
-      key-regexs:
-      - category: auth
-        regex: ^access_token$
-      - category: auth
-        regex: ^authorization$
-        session-identifier: true
-      - regex: ^remember_token$
-        category: auth
-        redaction-strategy: hash
-        session-identifier: true
-      - category: auth
-        regex: ^api_key$
-      - category: auth
-        regex: ^apikey$
-      - category: auth
-        regex: ^password$
-      - category: auth
-        regex: ^passwd$
-      - category: auth
-        regex: ^secret$
       prefixes:
-      - http.request.header.
-      - http.response.header.
+        - http.request.header.
+        - http.response.header.
+      complex-data:
+        - key: http.request.body
+          type-key: http.request.header.content-type
+        - key: http.response.body
+          type-key: http.response.header.content-type
+        - key: sql.query
+          type: sql
+        - key: http.url
+          type: urlencoded
+        - key: http.request.header.cookie
+          type: cookie
+        - key: http.response.header.set-cookie
+          type: cookie
+      key-regexs:
+        - regex: ^authorization$
+          category: auth
+          redaction-strategy: hash
+          session-identifier: true
+        - regex: ^remember_token$
+          category: auth
+          redaction-strategy: hash
+          session-identifier: true
+        - regex: ^access_token$
+          category: auth
+        - regex: ^api_key$
+          category: auth
+        - regex: ^apikey$
+          category: auth
+        - regex: ^password$
+          category: auth
+        - regex: ^passwd$
+          category: auth
+        - regex: ^secret$
+          category: auth
