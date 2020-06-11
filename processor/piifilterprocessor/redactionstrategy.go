@@ -12,16 +12,19 @@ const (
 	Dummy RedactionStrategy = iota
 	Redact
 	Hash
+	Raw
 )
 
 var toString = map[RedactionStrategy]string{
 	Redact: "redact",
 	Hash:   "hash",
+	Raw:    "raw",
 }
 
 var fromString = map[string]RedactionStrategy{
 	"redact": Redact,
 	"hash":   Hash,
+	"raw":    Raw,
 }
 
 func (rs RedactionStrategy) String() string {

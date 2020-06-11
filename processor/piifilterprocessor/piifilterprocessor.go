@@ -30,6 +30,7 @@ const (
 	queryParamTag     = "http.request.query.param"
 	requestCookieTag  = "http.request.cookie"
 	responseCookieTag = "http.response.cookie"
+	sessionIDTag      = "session.id"
 	// In case of empty json path, platform uses strings defined here as path
 	requestBodyEmptyJsonPath  = "REQUEST_BODY"
 	responseBodyEmptyJsonPath = "RESPONSE_BODY"
@@ -37,11 +38,12 @@ const (
 
 // PiiFilter identifies configuration for PII filtering
 type PiiElement struct {
-	Regex          string `mapstructure:"regex"`
-	Category       string `mapstructure:"category"`
-	RedactStrategy string `mapstructure:"redaction-strategy"`
-	Redact         RedactionStrategy
-	Fqn            *bool `mapstructure:"fqn,omitempty"`
+	Regex             string `mapstructure:"regex"`
+	Category          string `mapstructure:"category"`
+	RedactStrategy    string `mapstructure:"redaction-strategy"`
+	Redact            RedactionStrategy
+	Fqn               *bool `mapstructure:"fqn,omitempty"`
+	SessionIdentifier bool  `mapstructure:"session-identifier"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -83,6 +85,7 @@ type PiiFilter struct {
 type FilterData struct {
 	DlpElements    *list.List
 	RedactedValues map[string][]*inspector.Value
+	SessionID      string
 }
 
 type piifilterprocessor struct {
@@ -256,6 +259,8 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 		pfp.addDlpAttribute(span, filterData.DlpElements)
 
 		pfp.addInspectorAttribute(span, filterData.RedactedValues)
+
+		pfp.addSessionAttribute(span, filterData.SessionID)
 	}
 
 	return pfp.nextConsumer.ConsumeTraceData(ctx, td)
@@ -293,6 +298,10 @@ func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch 
 
 	isModified, redacted := pfp.redactAndFilterData(piiElem.Redact, value, inspectorKey, filterData)
 
+	if piiElem.SessionIdentifier {
+		filterData.SessionID = redacted
+	}
+
 	// TODO: Move actual key to enriched key when restructuring dlp.
 	pfp.addDlpElementToList(filterData.DlpElements, actualKey, path, piiElem.Category)
 	return isModified, redacted
@@ -324,6 +333,10 @@ func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string,
 	filtered := false
 	for regexp, piiElem := range pfp.valueRegexs {
 		filtered, value = pfp.replacingRegex(value, inspectorKey, regexp, piiElem, filterData)
+
+		if piiElem.SessionIdentifier {
+			filterData.SessionID = value
+		}
 
 		if filtered {
 			pfp.addDlpElementToList(filterData.DlpElements, key, path, piiElem.Category)
@@ -466,9 +479,10 @@ func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, val
 		redacted = redactedText
 		isRedacted = true
 	case Hash:
-		h := make([]byte, 64)
-		sha3.ShakeSum256(h, []byte(value))
-		redacted = fmt.Sprintf("%x", h)
+		redacted = HashValue(value)
+		isRedacted = false
+	case Raw:
+		redacted = value
 		isRedacted = false
 	default:
 		redacted = redactedText
@@ -479,6 +493,13 @@ func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, val
 	filterData.RedactedValues[inspectorKey] = append(filterData.RedactedValues[inspectorKey], val)
 
 	return true, redacted
+}
+
+// HashValue will return a hashed value of the entered string
+func HashValue(value string) string {
+	h := make([]byte, 64)
+	sha3.ShakeSum256(h, []byte(value))
+	return fmt.Sprintf("%x", h)
 }
 
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
@@ -587,4 +608,19 @@ func (pfp *piifilterprocessor) addInspectorAttribute(span *tracepb.Span, redacte
 	pbAttrib := &tracepb.AttributeValue{}
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encoded}}
 	span.GetAttributes().AttributeMap[inspectorTag] = pbAttrib
+}
+
+func (pfp *piifilterprocessor) addSessionAttribute(span *tracepb.Span, sessionID string) {
+	if len(sessionID) == 0 {
+		return
+	}
+	attribMap := span.GetAttributes().AttributeMap
+	// don't overwrite an exisiting session id
+	if _, ok := attribMap[sessionIDTag]; ok {
+		return
+	}
+
+	pbAttrib := &tracepb.AttributeValue{}
+	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: sessionID}}
+	attribMap[sessionIDTag] = pbAttrib
 }

@@ -19,13 +19,15 @@ import (
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
 	"go.uber.org/zap"
 )
 
 const (
-	enduserIDAttribute    = "enduser.id"
-	enduserRoleAttribute  = "enduser.role"
-	enduserScopeAttribute = "enduser.scope"
+	enduserIDAttribute      = "enduser.id"
+	enduserRoleAttribute    = "enduser.role"
+	enduserScopeAttribute   = "enduser.scope"
+	enduserSessionAttribute = "session.id"
 )
 
 // Condition is the condition that must be matched
@@ -38,18 +40,24 @@ type Condition struct {
 // Enduser is the configuration defining where to
 // extract enduser data
 type Enduser struct {
-	Key         string      `mapstructure:"key"`
-	Type        string      `mapstructure:"type"`
-	Conditions  []Condition `mapstructure:"conditions"`
-	IDClaims    []string    `mapstructure:"id_claims"`
-	IDPaths     []string    `mapstructure:"id_paths"`
-	IDKeys      []string    `mapstructure:"id_keys"`
-	RoleClaims  []string    `mapstructure:"role_claims"`
-	RolePaths   []string    `mapstructure:"role_paths"`
-	RoleKeys    []string    `mapstructure:"role_keys"`
-	ScopeClaims []string    `mapstructure:"scope_claims"`
-	ScopePaths  []string    `mapstructure:"scope_paths"`
-	ScopeKeys   []string    `mapstructure:"scope_keys"`
+	Key             string      `mapstructure:"key"`
+	Type            string      `mapstructure:"type"`
+	Encoding        string      `mapstructure:"encoding"`
+	CookieName      string      `mapstructure:"cookie_name"`
+	RawSessionValue bool        `mapstructure:"raw_session_value"`
+	Conditions      []Condition `mapstructure:"conditions"`
+	IDClaims        []string    `mapstructure:"id_claims"`
+	IDPaths         []string    `mapstructure:"id_paths"`
+	IDKeys          []string    `mapstructure:"id_keys"`
+	RoleClaims      []string    `mapstructure:"role_claims"`
+	RolePaths       []string    `mapstructure:"role_paths"`
+	RoleKeys        []string    `mapstructure:"role_keys"`
+	ScopeClaims     []string    `mapstructure:"scope_claims"`
+	ScopePaths      []string    `mapstructure:"scope_paths"`
+	ScopeKeys       []string    `mapstructure:"scope_keys"`
+	SessionClaims   []string    `mapstructure:"session_claims"`
+	SessionPaths    []string    `mapstructure:"session_paths"`
+	SessionKeys     []string    `mapstructure:"session_keys"`
 }
 
 type enduserprocessor struct {
@@ -97,9 +105,10 @@ func (processor *enduserprocessor) ConsumeTraceData(ctx context.Context, td data
 }
 
 type user struct {
-	id    string
-	role  string
-	scope string
+	id      string
+	role    string
+	scope   string
+	session string
 }
 
 func (processor *enduserprocessor) capture(span *tracepb.Span, enduser Enduser, value string) {
@@ -109,8 +118,11 @@ func (processor *enduserprocessor) capture(span *tracepb.Span, enduser Enduser, 
 
 	var user *user
 	switch enduser.Type {
+	// authtoken kept for backwards compatibility. Only compass uses this value.  If they
+	// update their config, we can remove it
 	case "authtoken":
-		user = processor.authTokenCapture(enduser, value)
+	case "authheader":
+		user = processor.authHeaderCapture(enduser, value)
 	case "json":
 		user = processor.jsonCapture(enduser, value)
 	case "urlencoded":
@@ -135,6 +147,10 @@ func (processor *enduserprocessor) capture(span *tracepb.Span, enduser Enduser, 
 
 	if len(user.scope) > 0 {
 		addSpanAttribute(span, enduserScopeAttribute, user.scope)
+	}
+
+	if len(user.session) > 0 {
+		addSpanAttribute(span, enduserSessionAttribute, user.session)
 	}
 }
 
@@ -182,35 +198,22 @@ func addSpanAttribute(span *tracepb.Span, key string, value string) {
 	attribMap[key] = pbAttrib
 }
 
-func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value string) *user {
+func (processor *enduserprocessor) authHeaderCapture(enduser Enduser, value string) *user {
 	lcValue := strings.ToLower(value)
 	if strings.HasPrefix(lcValue, "bearer ") {
 		tokenString := value[7:]
-		claims := jwt.MapClaims{}
-		_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claims)
-		if err != nil {
-			processor.logger.Info("Couldn't parse jwt", zap.Error(err))
+		var user *user
+		switch enduser.Encoding {
+		case "jwt":
+			user = processor.decodeJwt(enduser, tokenString)
+			// if a jwt auth header, use the entire header string (Bearer ey....) as that's
+			// the value the pii filter will hash
+			if len(user.session) == 0 {
+				user.session = piifilterprocessor.HashValue(value)
+			}
+		default:
+			processor.logger.Info("Unknown auth header encoding", zap.String("value", enduser.Encoding))
 			return nil
-		}
-
-		user := new(user)
-		for _, claim := range enduser.IDClaims {
-			if id, ok := claims[claim]; ok {
-				user.id = processor.jsonToString(id)
-				break
-			}
-		}
-		for _, claim := range enduser.RoleClaims {
-			if role, ok := claims[claim]; ok {
-				user.role = processor.jsonToString(role)
-				break
-			}
-		}
-		for _, claim := range enduser.ScopeClaims {
-			if scope, ok := claims[claim]; ok {
-				user.scope = processor.jsonToString(scope)
-				break
-			}
 		}
 		return user
 	} else if strings.HasPrefix(lcValue, "basic ") {
@@ -230,16 +233,62 @@ func (processor *enduserprocessor) authTokenCapture(enduser Enduser, value strin
 		user.id = string(creds[0])
 		return user
 	} else {
-		processor.logger.Info("Authorization token must be basic or bearer", zap.String("value", value))
+		processor.logger.Info("Authorization header must be basic or bearer", zap.String("value", value))
 	}
 
 	return nil
 }
 
-func (processor *enduserprocessor) jsonToString(claim interface{}) string {
-	json, err := json.Marshal(claim)
+func (processor *enduserprocessor) decodeJwt(enduser Enduser, tokenString string) *user {
+	claims := jwt.MapClaims{}
+	_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claims)
 	if err != nil {
-		processor.logger.Info("invalid claim", zap.Error(err))
+		processor.logger.Info("Couldn't parse jwt", zap.Error(err))
+		return nil
+	}
+
+	user := new(user)
+	for _, claim := range enduser.IDClaims {
+		if id, ok := claims[claim]; ok {
+			user.id = processor.jsonToString(id)
+			break
+		}
+	}
+	for _, claim := range enduser.RoleClaims {
+		if role, ok := claims[claim]; ok {
+			user.role = processor.jsonToString(role)
+			break
+		}
+	}
+	for _, claim := range enduser.ScopeClaims {
+		if scope, ok := claims[claim]; ok {
+			user.scope = processor.jsonToString(scope)
+			break
+		}
+	}
+	for _, claim := range enduser.SessionClaims {
+		if session, ok := claims[claim]; ok {
+			user.session = processor.jsonToString(session)
+			if !enduser.RawSessionValue {
+				user.session = piifilterprocessor.HashValue(user.session)
+			}
+			break
+		}
+	}
+	return user
+}
+
+func (processor *enduserprocessor) jsonToString(value interface{}) string {
+	// only unmarshal the value if it's a complex type, as we don't
+	// want all string values to be quoted
+	valueString, ok := value.(string)
+	if ok {
+		return valueString
+	}
+
+	json, err := json.Marshal(value)
+	if err != nil {
+		processor.logger.Info("invalid json value", zap.Error(err))
 		return ""
 	}
 
@@ -272,6 +321,16 @@ func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *u
 		scope, err := jsonpath.Read(json, path)
 		if err == nil {
 			user.scope = processor.jsonToString(scope)
+			break
+		}
+	}
+	for _, path := range enduser.SessionPaths {
+		session, err := jsonpath.Read(json, path)
+		if err == nil {
+			user.session = processor.jsonToString(session)
+			if !enduser.RawSessionValue {
+				user.session = piifilterprocessor.HashValue(user.session)
+			}
 			break
 		}
 	}
@@ -322,6 +381,22 @@ func (processor *enduserprocessor) urlencodedCapture(enduser Enduser, value stri
 			break
 		}
 	}
+	for _, key := range enduser.SessionKeys {
+		if values, ok := params[key]; ok {
+			for _, value := range values {
+				if len(value) > 0 {
+					user.session = value
+					if !enduser.RawSessionValue {
+						user.session = piifilterprocessor.HashValue(user.session)
+					}
+				}
+			}
+		}
+		if len(user.scope) > 0 {
+			break
+		}
+	}
+
 	return user
 }
 
@@ -330,6 +405,33 @@ func (processor *enduserprocessor) cookieCapture(enduser Enduser, value string) 
 	header.Add("Cookie", value)
 	request := http.Request{Header: header}
 	cookies := request.Cookies()
+
+	if len(enduser.Encoding) > 0 {
+		switch enduser.Encoding {
+		case "jwt":
+			if len(enduser.CookieName) > 0 {
+				for _, cookie := range cookies {
+					if cookie.Name == enduser.CookieName {
+						user := processor.decodeJwt(enduser, cookie.Value)
+						if user == nil {
+							return nil
+						}
+						// use the jwt cookie as the session string
+						if len(user.session) == 0 {
+							user.session = piifilterprocessor.HashValue(cookie.Value)
+						}
+						return user
+					}
+				}
+			} else {
+				processor.logger.Info("cookie_name must be specified when using jwt encoding")
+				return nil
+			}
+		default:
+			processor.logger.Info("Unknown cookie encoding", zap.String("value", enduser.Encoding))
+			return nil
+		}
+	}
 
 	user := new(user)
 	for _, key := range enduser.IDKeys {
@@ -365,5 +467,20 @@ func (processor *enduserprocessor) cookieCapture(enduser Enduser, value string) 
 			break
 		}
 	}
+	for _, key := range enduser.SessionKeys {
+		for _, cookie := range cookies {
+			if cookie.Name == key {
+				user.session = cookie.Value
+				if !enduser.RawSessionValue {
+					user.session = piifilterprocessor.HashValue(user.session)
+				}
+				break
+			}
+		}
+		if len(user.scope) > 0 {
+			break
+		}
+	}
+
 	return user
 }
