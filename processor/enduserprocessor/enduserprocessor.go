@@ -118,9 +118,6 @@ func (processor *enduserprocessor) capture(span *tracepb.Span, enduser Enduser, 
 
 	var user *user
 	switch enduser.Type {
-	// authtoken kept for backwards compatibility. Only compass uses this value.  If they
-	// update their config, we can remove it
-	case "authtoken":
 	case "authheader":
 		user = processor.authHeaderCapture(enduser, value)
 	case "json":
@@ -206,10 +203,8 @@ func (processor *enduserprocessor) authHeaderCapture(enduser Enduser, value stri
 		switch enduser.Encoding {
 		case "jwt":
 			user = processor.decodeJwt(enduser, tokenString)
-			// if a jwt auth header, use the entire header string (Bearer ey....) as that's
-			// the value the pii filter will hash
 			if len(user.session) == 0 {
-				user.session = piifilterprocessor.HashValue(value)
+				user.session = piifilterprocessor.HashValue(tokenString)
 			}
 		default:
 			processor.logger.Info("Unknown auth header encoding", zap.String("value", enduser.Encoding))
