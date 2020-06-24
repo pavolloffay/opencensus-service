@@ -7,8 +7,10 @@ metadata:
     # deploying this one.
     deployment.traceable.ai/tool: helm3
   labels:
-    app: oc-collector
     release: {{ .Release.Name }}
+  {{- with .Values.deploymentLabels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   minReadySeconds: {{ .Values.minReadySeconds }}
   progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
@@ -28,7 +30,10 @@ spec:
         prometheus.io/port: "8888"
         prometheus.io/scrape: "true"
       labels:
-        {{- toYaml .Values.podLabels | nindent 8 }}
+        release: {{ .Release.Name }}
+      {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
