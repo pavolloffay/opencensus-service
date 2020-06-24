@@ -119,6 +119,10 @@ global:
           category: auth
           redaction-strategy: hash
           session-identifier: true
+        - regex: ^session$
+          category: auth
+          redaction-strategy: hash
+          session-identifier: true
         - regex: ^access_token$
           category: auth
         - regex: ^api_key$

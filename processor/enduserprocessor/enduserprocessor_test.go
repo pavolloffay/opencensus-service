@@ -48,7 +48,7 @@ func Test_enduser_authHeader_bearer(t *testing.T) {
 	assert.Equal(t, "dave", user.id)
 	assert.Equal(t, "user", user.role)
 	assert.Equal(t, "traceable", user.scope)
-	assert.Equal(t, piifilterprocessor.HashValue("Bearer "+tokenString), user.session)
+	assert.Equal(t, piifilterprocessor.HashValue(tokenString), user.session)
 }
 
 func Test_enduser_authHeader_complexClaim(t *testing.T) {

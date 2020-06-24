@@ -299,7 +299,15 @@ func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch 
 	isModified, redacted := pfp.redactAndFilterData(piiElem.Redact, value, inspectorKey, filterData)
 
 	if piiElem.SessionIdentifier {
-		filterData.SessionID = redacted
+		// When using an auth header for tracking sessions, make sure
+		// to only hash the token and not the type, as the token can
+		// be tracked in more places than just an auth header.
+		if actualKey == "http.request.header.authorization" &&
+			strings.HasPrefix(strings.ToLower(value), "bearer ") {
+			filterData.SessionID = HashValue(value[7:])
+		} else {
+			filterData.SessionID = redacted
+		}
 	}
 
 	// TODO: Move actual key to enriched key when restructuring dlp.

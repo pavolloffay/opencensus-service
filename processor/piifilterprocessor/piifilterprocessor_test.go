@@ -433,6 +433,61 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		},
 
 		{
+			name: "auth_bearer_hash",
+			args: PiiFilter{
+				RedactStrategy: "Hash",
+				Prefixes: []string{
+					"http.request.header.",
+				},
+				KeyRegExs: []PiiElement{
+					{
+						Regex:             "^authorization$",
+						SessionIdentifier: true,
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"http.request.header.authorization": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Bearer abc123"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"http.request.header.authorization": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: HashValue("Bearer abc123")}},
+									},
+									"session.id": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: HashValue("abc123")}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "GqYBCg1hdXRob3JpemF0aW9uEpQBCpEBEo4BCoUBCoABMTBlMGRkYWJmM2NiZmJjNzAwZWMxNTQyZDdjOWEwYzEwOGY4M2U3ZDRiMTUyNjAyZWVhNDQ0ZDUxODk0Y2Q2NDJmNDYzNzI3NjNiNTNmODRlOGQ4Y2FjMDNhNzBjMTk5M2FjMDVhMTZmZjZkMTE0ODNiOWE4NjU5N2IxYTBjYmEQAhAFGA0iAA=="}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "[{\"key\":\"http.request.header.authorization\",\"path\":\"\",\"type\":\"\"}]"}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
 			name: "json_filter",
 			args: PiiFilter{
 				KeyRegExs: []PiiElement{
