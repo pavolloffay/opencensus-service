@@ -10,6 +10,7 @@ require (
 	contrib.go.opencensus.io/resource v0.1.2
 	github.com/DataDog/datadog-go v2.2.0+incompatible // indirect
 	github.com/DataDog/opencensus-go-exporter-datadog v0.0.0-20181026070331-e7c4bd17b329
+	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/Shopify/sarama v1.19.0
 	github.com/Traceableai/iam v0.0.0-20200301184440-cfe1c3c2bb43
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
@@ -23,11 +24,13 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.3.3
 	github.com/google/go-cmp v0.3.1
+	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway v1.13.0
 	github.com/honeycombio/opencensus-exporter v1.0.1
 	github.com/jaegertracing/jaeger v1.9.0
-	github.com/json-iterator/go v1.1.7
+	github.com/json-iterator/go v1.1.10
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/omnition/scribe-go v0.0.0-20190131012523-9e3c68f31124
 	github.com/onsi/gomega v1.4.3
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
@@ -46,7 +49,8 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/testify v1.6.1
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/uber-go/atomic v1.3.2 // indirect
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
@@ -54,7 +58,6 @@ require (
 	github.com/uber/tchannel-go v1.10.0
 	github.com/wavefronthq/opencensus-exporter v0.0.0-20190506162721-983d7cdaceaf
 	github.com/wavefronthq/wavefront-sdk-go v0.9.2
-	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.opencensus.io v0.22.0
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0
@@ -63,7 +66,9 @@ require (
 	google.golang.org/api v0.7.0
 	google.golang.org/grpc v1.27.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.12.1 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
 
 replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0

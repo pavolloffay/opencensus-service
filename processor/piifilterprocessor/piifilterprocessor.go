@@ -406,7 +406,7 @@ func (pfp *piifilterprocessor) filterJson(span *tracepb.Span, key string, value 
 	// if json is invalid, run the value filter on the json string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.logger.Info("Problem parsing json. Falling back to value regex filtering", zap.String("json", jsonString))
+		pfp.logger.Debug("Problem parsing json. Falling back to value regex filtering", zap.String("json", jsonString))
 		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
@@ -422,7 +422,7 @@ func (pfp *piifilterprocessor) filterUrlEncoded(span *tracepb.Span, key string, 
 	parseFail, urlEncodedChanged := filter.Filter(urlEncodedString, key, filterData)
 
 	if parseFail {
-		pfp.logger.Info("Problem parsing form url encoded data. Falling back to value regex filtering", zap.String("urlEncoded", urlEncodedString))
+		pfp.logger.Debug("Problem parsing form url encoded data. Falling back to value regex filtering", zap.String("urlEncoded", urlEncodedString))
 		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
@@ -440,7 +440,7 @@ func (pfp *piifilterprocessor) filterSql(span *tracepb.Span, key string, value *
 	// if sql is invalid, run the value filter on the sql string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.logger.Info("Problem parsing sql. Falling back to value regex filtering", zap.String("sql", sqlString))
+		pfp.logger.Debug("Problem parsing sql. Falling back to value regex filtering", zap.String("sql", sqlString))
 		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 
@@ -458,7 +458,7 @@ func (pfp *piifilterprocessor) filterCookie(span *tracepb.Span, key string, valu
 	// if cookie is invalid, run the value filter on the cookie string to try and
 	// filter out any keywords out of the string
 	if parseFail {
-		pfp.logger.Info("Problem parsing cookie. Falling back to value regex filtering", zap.String("cookie", cookieString))
+		pfp.logger.Debug("Problem parsing cookie. Falling back to value regex filtering", zap.String("cookie", cookieString))
 		pfp.filterValueRegexs(span, key, value, filterData)
 	}
 

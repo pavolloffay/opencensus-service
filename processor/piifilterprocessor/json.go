@@ -32,7 +32,7 @@ func (f *jsonFilter) Filter(input string, key string, filterData *FilterData) (b
 
 	err := jsoniter.UnmarshalFromString(input, &f.json)
 	if err != nil {
-		f.logger.Info("Problem parsing json", zap.Error(err), zap.String("json", input))
+		f.logger.Debug("Problem parsing json", zap.Error(err), zap.String("json", input))
 		return true, false
 	}
 
