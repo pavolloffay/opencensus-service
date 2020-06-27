@@ -164,6 +164,38 @@ func Test_enduser_complexJson(t *testing.T) {
 	assert.Equal(t, piifilterprocessor.HashValue("abc"), user.session)
 }
 
+func Test_enduser_truncatedJson(t *testing.T) {
+	endusers := []Enduser{Enduser{
+		Key:          "http.response.body",
+		Type:         "json",
+		IDPaths:      []string{"$.userInfo.name"},
+		RolePaths:    []string{"$.userInfo.role"},
+		ScopePaths:   []string{"$.userInfo.scope"},
+		SessionPaths: []string{"$.token"},
+	}}
+	jsonStr := string(`
+	{
+			"userInfo": {
+					"name": "dave",
+					"role": ["user", "admin"],
+					"scope": "traceable"
+			},
+			"token": "abc"
+	`) // note the missing }
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.jsonCapture(endusers[0], jsonStr)
+	assert.NotNil(t, user)
+	assert.Equal(t, "dave", user.id)
+	assert.Equal(t, "[\"user\",\"admin\"]", user.role)
+	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, piifilterprocessor.HashValue("abc"), user.session)
+}
+
 func Test_enduser_urlencoded(t *testing.T) {
 	endusers := []Enduser{Enduser{
 		Key:         "http.response.body",

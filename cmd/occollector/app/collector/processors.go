@@ -329,6 +329,7 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			zap.Bool("overwrite", multiProcessorCfg.Global.Attributes.Overwrite),
 			zap.Any("values", multiProcessorCfg.Global.Attributes.Values),
 			zap.Any("key-mapping", multiProcessorCfg.Global.Attributes.KeyReplacements),
+			zap.Any("enduser", multiProcessorCfg.Global.Attributes.PiiFilter),
 			zap.Any("pii-filter", multiProcessorCfg.Global.Attributes.PiiFilter),
 			zap.Bool("tenantid-reader-enabled", multiProcessorCfg.Global.Attributes.TenantIDReaderEnabled),
 		)

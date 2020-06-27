@@ -11,10 +11,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/PaesslerAG/jsonpath"
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/dgrijalva/jwt-go"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/yalp/jsonpath"
 
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
@@ -291,36 +291,42 @@ func (processor *enduserprocessor) jsonToString(value interface{}) string {
 }
 
 func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *user {
-	var json interface{}
-	err := jsoniter.UnmarshalFromString(value, &json)
+	var v interface{}
+	err := jsoniter.Config{
+		EscapeHTML:              false,
+		MarshalFloatWith6Digits: false,
+		ValidateJsonRawMessage:  false,
+	}.Froze().UnmarshalFromString(value, &v)
+	// if there's an error parsing the json, log it for debuggin, but carry on
+	// as we can usually still extract the user info from truncated json.
 	if err != nil {
-		processor.logger.Info("Could not parse json to capture user", zap.Error(err))
+		processor.logger.Debug("Could not parse json to capture user", zap.Error(err))
 	}
 
 	user := new(user)
 	for _, path := range enduser.IDPaths {
-		id, err := jsonpath.Read(json, path)
+		id, err := jsonpath.Get(path, v)
 		if err == nil {
 			user.id = processor.jsonToString(id)
 			break
 		}
 	}
 	for _, path := range enduser.RolePaths {
-		role, err := jsonpath.Read(json, path)
+		role, err := jsonpath.Get(path, v)
 		if err == nil {
 			user.role = processor.jsonToString(role)
 			break
 		}
 	}
 	for _, path := range enduser.ScopePaths {
-		scope, err := jsonpath.Read(json, path)
+		scope, err := jsonpath.Get(path, v)
 		if err == nil {
 			user.scope = processor.jsonToString(scope)
 			break
 		}
 	}
 	for _, path := range enduser.SessionPaths {
-		session, err := jsonpath.Read(json, path)
+		session, err := jsonpath.Get(path, v)
 		if err == nil {
 			user.session = processor.jsonToString(session)
 			if !enduser.RawSessionValue {

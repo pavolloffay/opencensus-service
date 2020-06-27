@@ -37,7 +37,7 @@ func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterDa
 	if isUrlAttribute {
 		u, err = url.Parse(input)
 		if err != nil {
-			f.logger.Info("Problem parsing url", zap.Error(err), zap.String("urlEncoded", input))
+			f.logger.Debug("Problem parsing url", zap.Error(err), zap.String("urlEncoded", input))
 			return true, false
 		}
 		rawString = u.RawQuery
@@ -45,7 +45,7 @@ func (f *urlEncodedFilter) Filter(input string, key string, filterData *FilterDa
 
 	params, err := url.ParseQuery(rawString)
 	if err != nil {
-		f.logger.Info("Problem parsing urlencoded", zap.Error(err), zap.String("urlEncoded", input))
+		f.logger.Debug("Problem parsing urlencoded", zap.Error(err), zap.String("urlEncoded", input))
 		return true, false
 	}
 
