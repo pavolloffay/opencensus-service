@@ -82,8 +82,11 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, endusers []Enduser, 
 
 func (processor *enduserprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	for _, span := range td.Spans {
+		if span == nil || span.Attributes == nil {
+			continue
+		}
 		attribMap := span.Attributes.AttributeMap
-		if span == nil || span.Attributes == nil || len(attribMap) == 0 {
+		if len(attribMap) == 0 {
 			continue
 		}
 
