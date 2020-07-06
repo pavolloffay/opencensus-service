@@ -1,0 +1,129 @@
+# Default values for the helm chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+###########
+# Deployment and Service
+###########
+logLevel: INFO
+
+minReadySeconds: 5
+progressDeadlineSeconds: 120
+replicaCount: 1
+maxUnavailable: 0
+
+image:
+  repository: hypertrace/hypertrace-oc-collector
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: regcred
+
+env:
+  - name: GOGC
+    value: "80"
+
+containerPorts:
+  - name: grpc-opencensus
+    containerPort: 55678
+  - name: http-jaeger
+    containerPort: 14268
+
+service:
+  type: ClusterIP
+  ports:
+  - name: grpc-opencensus
+    port: 55678
+    targetPort: 55678
+    protocol: TCP
+  - name: http-jaeger
+    port: 14268
+    targetPort: 14268
+    protocol: TCP
+
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+   limits:
+     cpu: 1
+     memory: 2Gi
+   requests:
+     cpu: 200m
+     memory: 400Mi
+
+podLabels:
+  app: hypertrace-oc-collector
+
+# The Deployment Selector match labels are different from the pod labels. Note that they should be a subset of the pod
+# labels. You append new labels to them but cannot remove labels. If you remove or modify the labels you will need to
+# delete the existing deployment bearing the same name and then redeploy. This is the reason why they are separated from
+# the pod labels. You can add and remove pod labels without having an effect on the deployment.
+# Also, please use "apiVersion: apps/v1" instead of the deprecated "apiVersion: extensions/v1beta1" for the deployment
+# apiVersion in the yaml file.
+deploymentSelectorMatchLabels:
+  app: hypertrace-oc-collector
+
+serviceSelectorLabels:
+  app: hypertrace-oc-collector
+
+# Volumes and Volume mounts
+volumeMounts:
+  - name: hypertrace-oc-collector-config-vol
+    mountPath: /conf
+
+volumes:
+  - configMap:
+      name: hypertrace-oc-collector-conf
+      items:
+        - key: hypertrace-oc-collector-config
+          path: hypertrace-oc-collector-config.yaml
+    name: hypertrace-oc-collector-config-vol
+
+nodeSelector: {}
+
+###########
+# Config Maps
+###########
+configMap:
+  name: hypertrace-oc-collector-conf
+  data:
+    log-level: INFO
+    receivers:
+      opencensus:
+        # keepalive settings can help load balancing, see receiver/README.md for more info.
+        keepalive:
+          server-parameters:
+            max-connection-age: 120s
+            max-connection-age-grace: 30s
+      jaeger: {}
+    exporters:
+      kafka:
+        brokers: ["bootstrap:9092"]
+        topic: "jaeger-spans"
+
+kafka-topic-creator:
+  enabled: true
+  jobName: jaeger-spans-kafka-topic-creator
+  helmHook: pre-install,pre-upgrade
+  kafka:
+    topics:
+      - name: jaeger-spans
+        replicationFactor: 2
+        partitions: 8
+        configs:
+          - retention.bytes=4294967296
+          - retention.ms=259200000
+  zookeeper:
+    address: zookeeper:2181
+  imagePullSecrets:
+    - name: regcred

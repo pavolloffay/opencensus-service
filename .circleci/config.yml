@@ -1,0 +1,116 @@
+version: 2.1
+
+orbs:
+  snyk: snyk/snyk@0.0.10
+
+references:
+  workspace_root: &workspace_root
+    /tmp/workspace
+
+executors:
+  gradle_docker:
+    docker:
+      - image: circleci/openjdk:11-jdk
+  golang_docker:
+    docker:
+      - image: circleci/golang:1.13
+  helm:
+    docker:
+      - image: hypertrace/helm-gcs-packager:0.1.1
+
+commands:
+  setup_build_environment:
+    steps:
+      - checkout
+      - attach_workspace:
+          at: *workspace_root
+
+jobs:
+  build:
+    executor: golang_docker
+    # resource_class: large
+    steps:
+      - setup_build_environment
+      - run: sudo apt-get update && sudo apt-get install -y bzr
+      - run: make install-tools
+      # - run: make test
+      - run: make collector
+      - run: cp -v ./bin/occollector_linux /tmp/workspace
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - occollector_linux
+
+  publish:
+    executor: gradle_docker
+    steps:
+      - add_ssh_keys: &ssh-fingerprint
+          fingerprints:
+            - "4b:17:55:41:7c:82:34:17:ff:2a:6b:02:cf:6f:86:25"
+      - setup_build_environment
+      - setup_remote_docker
+      - run: ./gradlew :tag -Prelease
+      - run: cp -v /tmp/workspace/occollector_linux ./cmd/occollector/
+      - run: ./gradlew dockerPushImages
+      - run: git push origin $(./gradlew -q :printVersion)
+
+  validate-charts:
+    executor: helm
+    steps:
+      - checkout
+      - run:
+          name: Helm Charts Lint and Template Render
+          command: |
+            helm dependency update ./helm/
+            helm lint --strict ./helm/
+            helm template ./helm/
+
+  package-charts:
+    executor: helm
+    steps:
+      - checkout
+      - run:
+          name: Package and Publish Helm Charts
+          command: |
+            CHART_VERSION=$(git describe --abbrev=0)
+            CHART_NAME=$(awk '/^name:/ {print $2}' ./helm/Chart.yaml)
+            export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/helm-gcs-key.json
+            echo ${HELM_GCS_CREDENTIALS} > ${GOOGLE_APPLICATION_CREDENTIALS}
+            helm repo add helm-gcs ${HELM_GCS_REPOSITORY}
+            helm package --version ${CHART_VERSION} --app-version ${CHART_VERSION} ./helm/
+            helm gcs push ${CHART_NAME}-${CHART_VERSION}.tgz helm-gcs --public --retry
+
+  snyk-scan:
+    executor: golang_docker
+    steps:
+      - setup_build_environment
+      - snyk/scan:
+          additional-arguments: --policy-path=.snyk --file=go.mod --prune-repeated-subdependencies
+
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - build
+      - validate-charts
+      # - snyk-scan:
+      #     context: hypertrace-vulnerability-scanning
+      #     requires:
+      #       - build
+      - publish:
+          context: hypertrace-publishing
+          requires:
+            - build
+            - validate-charts
+          filters:
+            branches:
+              only:
+                - master
+      - package-charts:
+          context: hypertrace-publishing
+          requires:
+          - publish
+          filters:
+            branches:
+              only:
+              - master

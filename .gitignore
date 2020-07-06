@@ -22,3 +22,7 @@ cmd/occollector/occollector_linux
 # Coverage
 coverage.txt
 coverage.html
+
+# Gradle
+build
+.gradle

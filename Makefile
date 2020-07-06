@@ -97,7 +97,7 @@ unisvc:
 docker-component: check-component
 	GOOS=linux $(MAKE) $(COMPONENT)
 	cp ./bin/oc$(COMPONENT)_linux ./cmd/oc$(COMPONENT)/
-	docker build -t oc$(COMPONENT) ./cmd/oc$(COMPONENT)/
+	docker build -t hypertrace/opencensus-$(COMPONENT) ./cmd/oc$(COMPONENT)/
 	rm ./cmd/oc$(COMPONENT)/oc$(COMPONENT)_linux
 
 .PHONY: check-component
