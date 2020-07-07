@@ -16,9 +16,6 @@ image:
   repository: hypertrace/hypertrace-oc-collector
   pullPolicy: IfNotPresent
 
-imagePullSecrets:
-  - name: regcred
-
 env:
   - name: GOGC
     value: "80"
@@ -125,5 +122,4 @@ kafka-topic-creator:
           - retention.ms=259200000
   zookeeper:
     address: zookeeper:2181
-  imagePullSecrets:
-    - name: regcred
+  imagePullSecrets: []
