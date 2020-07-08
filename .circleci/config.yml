@@ -28,7 +28,6 @@ commands:
 jobs:
   build:
     executor: golang_docker
-    # resource_class: large
     steps:
       - setup_build_environment
       - run: sudo apt-get update && sudo apt-get install -y bzr
@@ -93,10 +92,10 @@ workflows:
     jobs:
       - build
       - validate-charts
-      # - snyk-scan:
-      #     context: hypertrace-vulnerability-scanning
-      #     requires:
-      #       - build
+      - snyk-scan:
+          context: hypertrace-vulnerability-scanning
+          requires:
+            - build
       - publish:
           context: hypertrace-publishing
           requires:
