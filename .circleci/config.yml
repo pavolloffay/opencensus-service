@@ -13,7 +13,7 @@ executors:
       - image: circleci/openjdk:11-jdk
   golang_docker:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.12
   helm:
     docker:
       - image: hypertrace/helm-gcs-packager:0.1.1
@@ -93,10 +93,10 @@ workflows:
     jobs:
       - build
       - validate-charts
-      # - snyk-scan:
-      #     context: hypertrace-vulnerability-scanning
-      #     requires:
-      #       - build
+      - snyk-scan:
+          context: hypertrace-vulnerability-scanning
+          requires:
+            - build
       - publish:
           context: hypertrace-publishing
           requires:
