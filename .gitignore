@@ -26,3 +26,7 @@ coverage.html
 # Gradle
 build
 .gradle
+
+helm/Chart.lock
+helm/charts
+*.tgz

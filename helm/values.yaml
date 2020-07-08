@@ -123,3 +123,4 @@ kafka-topic-creator:
   zookeeper:
     address: zookeeper:2181
   imagePullSecrets: []
+  podAnnotations: {}
