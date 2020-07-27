@@ -7,7 +7,7 @@ references:
 executors:
   gradle_docker:
     docker:
-      - image: circleci/openjdk:11-jdk
+      - image: cimg/openjdk:11.0
   golang_docker:
     docker:
       - image: circleci/golang:1.12
@@ -66,9 +66,9 @@ jobs:
       - setup_build_environment
       - setup_remote_docker
       - run: ./gradlew :tag -Prelease
-      - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
-      - run: ./gradlew dockerPushImage -PartifactPath=deployments/artifacts/
       - run: git push origin $(./gradlew -q :printVersion)
+      - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
+      - run: ./gradlew dockerPushImages -PartifactPath=deployments/artifacts/
 
   validate-charts:
     executor: helm

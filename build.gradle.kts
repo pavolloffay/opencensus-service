@@ -3,9 +3,11 @@ import com.google.protobuf.gradle.*
 plugins {
   id("java-library")
   id("com.google.protobuf") version "0.8.11"
-  id("ai.traceable.gradle.traceable-repository-plugin") version "0.5.0"
-  id("ai.traceable.gradle.traceable-docker") version "0.5.0"
-  id("ai.traceable.gradle.traceable-docker-publish") version "0.5.0"
+  id("ai.traceable.repository-plugin") version "1.2.1"
+  id("org.hypertrace.ci-utils-plugin") version "0.1.2"
+  id("org.hypertrace.docker-plugin") version "0.2.3"
+  id("org.hypertrace.docker-publish-plugin") version "0.2.3"
+  id("ai.traceable.docker-convention-plugin") version "1.2.1"
 }
 
 group = "ai.traceable.agent"
@@ -85,7 +87,7 @@ tasks.register<Copy>("copyModsecurityCrsFiles") {
   into("$artifactPath/config")
 }
 
-traceableDocker {
+hypertraceDocker {
   defaultImage {
     imageName.set("$group/oc-collector")
     dockerFile.set(file("deployments/Dockerfile"))
