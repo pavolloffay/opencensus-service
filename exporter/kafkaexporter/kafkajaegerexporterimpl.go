@@ -34,18 +34,24 @@ func newTraceExporter(o Options) (*traceExporter, error) {
 		p = o.p
 	} else {
 		var err error
-		if p, err = newAsyncProducer(o.Brokers); err != nil {
+		if p, err = newAsyncProducer(o.Brokers, o.MetadataRetryMax, o.MetadataRetryBackOff); err != nil {
 			return nil, fmt.Errorf("opencensus kafka exporter: couldn't initialize kafka producer: %v", err)
 		}
 	}
 	return newTraceExporterWithClient(o, p), nil
 }
 
-func newAsyncProducer(brokerList []string) (sarama.AsyncProducer, error) {
+func newAsyncProducer(brokerList []string, metadataRetryMax int, metadataRetryBackOff time.Duration) (sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
 	config.Producer.Compression = sarama.CompressionSnappy   // Compress messages
 	config.Producer.Flush.Frequency = 500 * time.Millisecond // Flush batches every 500ms
+	if metadataRetryBackOff > 0 {
+		config.Metadata.Retry.Backoff = metadataRetryBackOff
+	}
+	if metadataRetryMax > 0 {
+		config.Metadata.Retry.Max = metadataRetryMax
+	}
 
 	producer, err := sarama.NewAsyncProducer(brokerList, config)
 	if err != nil {

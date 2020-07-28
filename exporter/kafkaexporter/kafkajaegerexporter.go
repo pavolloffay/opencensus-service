@@ -24,6 +24,13 @@ type Options struct {
 	// Required
 	Topic string
 
+	// How long to wait for leader election to occur before retrying.
+	MetadataRetryBackOff time.Duration
+
+	// The total number of times to retry a metadata request when the
+	// cluster is in the middle of a leader election.
+	MetadataRetryMax int
+
 	// OnError is the hook to be called when there is
 	// an error uploading the tracing data.
 	// If no custom hook is set, errors are logged.

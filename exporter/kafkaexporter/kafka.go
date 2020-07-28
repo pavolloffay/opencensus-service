@@ -16,6 +16,7 @@ package kafkaexporter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/exporter/exporterwrapper"
@@ -25,6 +26,8 @@ import (
 type kafkaConfig struct {
 	Brokers []string `mapstructure:"brokers,omitempty"`
 	Topic   string   `mapstructure:"topic,omitempty"`
+	MetadataRetryBackOff time.Duration `mapstructure:"metadata-retry-backoff,omitempty"`
+	MetadataRetryMax int `mapstructure:"metadata-retry-max,omitempty"`
 }
 
 // KafkaExportersFromViper unmarshals the viper and returns an consumer.TraceConsumer targeting
@@ -45,6 +48,8 @@ func KafkaExportersFromViper(v *viper.Viper) (tps []consumer.TraceConsumer, mps 
 	kde, kerr := newKafkaExporter(Options{
 		Brokers: kc.Brokers,
 		Topic:   kc.Topic,
+		MetadataRetryMax: kc.MetadataRetryMax,
+		MetadataRetryBackOff: kc.MetadataRetryBackOff,
 	})
 
 	if kerr != nil {
