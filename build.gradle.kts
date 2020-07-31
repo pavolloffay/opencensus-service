@@ -10,8 +10,6 @@ plugins {
   id("ai.traceable.docker-convention-plugin") version "1.2.1"
 }
 
-group = "ai.traceable.agent"
-
 var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").toString()
 
 val protobufVersion = "3.11.4"
@@ -89,7 +87,7 @@ tasks.register<Copy>("copyModsecurityCrsFiles") {
 
 hypertraceDocker {
   defaultImage {
-    imageName.set("$group/oc-collector")
+    imageName.set("oc-collector")
     dockerFile.set(file("deployments/Dockerfile"))
   }
 }
