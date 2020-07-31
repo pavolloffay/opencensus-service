@@ -7,7 +7,7 @@ references:
 executors:
   gradle_docker:
     docker:
-      - image: circleci/openjdk:11-jdk
+      - image: cimg/openjdk:11.0
   golang_docker:
     docker:
       - image: circleci/golang:1.12
@@ -66,9 +66,9 @@ jobs:
       - setup_build_environment
       - setup_remote_docker
       - run: ./gradlew :tag -Prelease
-      - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
-      - run: ./gradlew dockerPushImage -PartifactPath=deployments/artifacts/
       - run: git push origin $(./gradlew -q :printVersion)
+      - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
+      - run: ./gradlew dockerPushImages -PartifactPath=deployments/artifacts/
 
   validate-charts:
     executor: helm
@@ -77,7 +77,6 @@ jobs:
     - run:
         name: Helm Charts Lint and Template Render
         command: |
-          helm repo add traceable https://traceableai.jfrog.io/traceableai/helm --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
           helm dependency update ./helm/
           helm lint --strict ./helm/
           helm template ./helm/
@@ -89,7 +88,6 @@ jobs:
         name: Package and Publish Helm Charts
         # Read the "name:" from Chart.yaml. The chart version is <chart-name>-<semver git tag>
         command: |
-          helm repo add traceable https://traceableai.jfrog.io/traceableai/helm --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
           helm dependency update ./helm/
           helm package --version $(git describe --abbrev=0) --app-version $(git describe --abbrev=0) ./helm/
           helm push-artifactory $(awk '/^name:/ {print $2}' ./helm/Chart.yaml)-$(git describe --abbrev=0).tgz https://traceableai.jfrog.io/traceableai/helm --username $DOCKER_USERNAME --password $DOCKER_PASSWORD --skip-reindex

@@ -13,7 +13,7 @@ replicaCount: 1
 maxUnavailable: 0
 
 image:
-  repository: traceableai-docker.jfrog.io/ai.traceable.agent/oc-collector
+  repository: traceableai-docker.jfrog.io/traceable/oc-collector
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -131,5 +131,6 @@ kafka-topic-creator:
           - retention.ms=259200000
   zookeeper:
     address: zookeeper:2181
-  imagePullSecrets:
-    - name: regcred
+  imagePullSecrets: []
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
