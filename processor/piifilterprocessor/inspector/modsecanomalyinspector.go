@@ -50,10 +50,14 @@ func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecins
 func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
 	attrMap := make(map[string]string)
 	for key, values := range keyToValuesMap {
+
 		if len(values) == 1 {
 			attrMap[key] = values[0].OriginalValue
 		} else {
 			for idx, value := range values {
+				if value == nil {
+					continue
+				}
 				attrKey := key + "_" + strconv.Itoa(idx)
 				attrMap[attrKey] = value.OriginalValue
 			}

@@ -54,3 +54,25 @@ func Test_typeinspector_string(t *testing.T) {
 
 	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_STRING)
 }
+
+func Test_typeinspector_nil(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	inspector := newTypeInspector(logger)
+	message := &pb.ParamValueInspection{}
+	message.MetadataInspection = &pb.MetadataInspection{}
+
+	inspector.inspect(message, "test.key", nil)
+
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_UNSPECIFIED)
+}
+
+func Test_typeinspector_empty(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	inspector := newTypeInspector(logger)
+	message := &pb.ParamValueInspection{}
+	message.MetadataInspection = &pb.MetadataInspection{}
+
+	inspector.inspect(message, "test.key", &Value{OriginalValue: ""})
+
+	assert.True(t, message.MetadataInspection.Type == pb.ParamValueType_PARAM_VALUE_TYPE_STRING)
+}

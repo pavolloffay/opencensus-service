@@ -48,6 +48,10 @@ func (ti *typeinspector) inspect(message *pb.ParamValueInspection, key string, v
 
 	var paramType pb.ParamValueType
 
+	if value == nil {
+		return
+	}
+
 	switch {
 	case isBool(value.OriginalValue):
 		paramType = pb.ParamValueType_PARAM_VALUE_TYPE_BOOLEAN
