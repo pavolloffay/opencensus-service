@@ -1,7 +1,5 @@
 module github.com/census-instrumentation/opencensus-service
 
-go 1.14
-
 require (
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/jaeger v0.1.1-0.20190430175949-e8b55949d948
