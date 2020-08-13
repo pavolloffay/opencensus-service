@@ -22,6 +22,10 @@ func (li *lengthinspector) inspect(message *pb.ParamValueInspection, key string,
 		return
 	}
 
+	if value == nil || len(value.OriginalValue) == 0 {
+		return
+	}
+
 	message.MetadataInspection.Length = int32(len(value.OriginalValue))
 	return
 }

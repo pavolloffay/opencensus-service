@@ -79,3 +79,27 @@ func Test_specialCharDistInspector_partialjson(t *testing.T) {
 	inspector.inspect(message, "test.key", &Value{OriginalValue: "{\"$lt\" : \"100}"})
 	assert.False(t, message.MetadataInspection.SpecialCharInspection.ContainsNosqlOp)
 }
+
+func Test_specialchardistinspector_nil(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	inspector := newSpecialCharDistInspector(logger)
+	message := &pb.ParamValueInspection{}
+	message.MetadataInspection = &pb.MetadataInspection{}
+
+	inspector.inspect(message, "test.key", nil)
+	assert.True(t, len(message.MetadataInspection.SpecialCharInspection.SpecialCharDistribution) == 0)
+	assert.False(t, message.MetadataInspection.SpecialCharInspection.StartsWithPipe)
+	assert.False(t, message.MetadataInspection.SpecialCharInspection.ContainsNosqlOp)
+}
+
+func Test_specialchardistinspector_empty_string(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	inspector := newSpecialCharDistInspector(logger)
+	message := &pb.ParamValueInspection{}
+	message.MetadataInspection = &pb.MetadataInspection{}
+
+	inspector.inspect(message, "test.key", &Value{OriginalValue: ""})
+	assert.True(t, len(message.MetadataInspection.SpecialCharInspection.SpecialCharDistribution) == 0)
+	assert.False(t, message.MetadataInspection.SpecialCharInspection.StartsWithPipe)
+	assert.False(t, message.MetadataInspection.SpecialCharInspection.ContainsNosqlOp)
+}

@@ -92,6 +92,10 @@ func (scdi *specialchardistinspector) inspect(message *pb.ParamValueInspection, 
 
 	message.MetadataInspection.SpecialCharInspection.SpecialCharDistribution = make(map[int32]int32)
 
+	if value == nil || len(value.OriginalValue) == 0 {
+		return
+	}
+
 	if value.OriginalValue[0] == '|' {
 		message.MetadataInspection.SpecialCharInspection.StartsWithPipe = true
 	}

@@ -65,3 +65,25 @@ func Test_ModsecInspector_multiValueKey(t *testing.T) {
 
 	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].Id == "100")
 }
+
+func Test_ModsecInspector_nilInSlice(t *testing.T) {
+	logger := zap.New(zapcore.NewNopCore())
+	config := ModsecConfig{
+		Rules: `
+		SecRule ARGS|ARGS_NAMES "@detectSQLi" "id:100"
+		`,
+	}
+	inspector := NewModsecInspector(logger, config)
+	assert.True(t, inspector != nil)
+
+	testAttrs := make(map[string][]*Value)
+	testAttrs["http.request.body.login"] = append(append(make([]*Value, 0), nil), &Value{OriginalValue: "' or '1'='1"})
+
+	message := &pb.HttpApiInspection{}
+	inspector.inspect(message, testAttrs)
+
+	assert.True(t, message.AnomalyInspection != nil)
+	assert.True(t, len(message.AnomalyInspection.ModSecAnomalies) == 1)
+
+	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].Id == "100")
+}
