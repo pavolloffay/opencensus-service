@@ -367,6 +367,11 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, filterData 
 				}
 			}
 
+			if attrib == nil || attrib.GetStringValue() == nil {
+				pfp.logger.Debug("nil or non string value", zap.String("attribute", elem.TypeKey))
+				continue
+			}
+
 			// couldn't work out data type, so ignore
 			if len(dataType) == 0 {
 				pfp.logger.Debug("Unknown data type", zap.String("attribute", elem.TypeKey))
