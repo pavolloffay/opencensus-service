@@ -4,11 +4,16 @@ package inspector
 
 import (
 	"strconv"
+	"strings"
 
 	pb "github.com/census-instrumentation/opencensus-service/generated/main/go/ai/traceable/platform/apiinspection/v1"
 
 	"github.com/census-instrumentation/opencensus-service/modsec"
 	"go.uber.org/zap"
+)
+
+const (
+	redactedText = "***"
 )
 
 type modsecanomalyinspector struct {
@@ -79,6 +84,12 @@ func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToVa
 	var modSecAnomalies []*pb.ModSecAnomaly
 
 	for _, elem := range ret {
+		for _, value := range attrMap {
+			if strings.Contains(elem.MatchMessage, value) {
+				elem.MatchMessage = strings.ReplaceAll(elem.MatchMessage, value, redactedText)
+			}
+		}
+
 		anomaly := &pb.ModSecAnomaly{
 			Id:            elem.RuleId,
 			MatchMessage:  elem.MatchMessage,
