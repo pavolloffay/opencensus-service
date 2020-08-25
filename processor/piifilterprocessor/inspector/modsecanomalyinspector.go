@@ -17,14 +17,16 @@ const (
 )
 
 type modsecanomalyinspector struct {
-	logger *zap.Logger
-	lib    modsec.ModsecLib
+	logger          *zap.Logger
+	lib             modsec.ModsecLib
+	redactSensitive bool
 }
 
 type ModsecConfig struct {
-	ConfigDir string `mapstructure:"config-dir"`
-	FileName  string `mapstructure:"file-name"`
-	Rules     string `mapstructure:"rules"`
+	ConfigDir       string `mapstructure:"config-dir"`
+	FileName        string `mapstructure:"file-name"`
+	Rules           string `mapstructure:"rules"`
+	RedactSensitive *bool  `mapstructure:"redact-sensitive,omitempty"`
 }
 
 func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecinspector {
@@ -46,9 +48,14 @@ func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecins
 		logger.Warn("Problem while processing configuration.")
 		return nil
 	}
+	redactSensitive := true
+	if modsecConfig.RedactSensitive != nil {
+		redactSensitive = *modsecConfig.RedactSensitive
+	}
 	return &modsecanomalyinspector{
-		logger: logger,
-		lib:    lib,
+		logger:          logger,
+		lib:             lib,
+		redactSensitive: redactSensitive,
 	}
 }
 
@@ -84,9 +91,11 @@ func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToVa
 	var modSecAnomalies []*pb.ModSecAnomaly
 
 	for _, elem := range ret {
-		for _, value := range attrMap {
-			if strings.Contains(elem.MatchMessage, value) {
-				elem.MatchMessage = strings.ReplaceAll(elem.MatchMessage, value, redactedText)
+		if mi.redactSensitive {
+			for _, value := range attrMap {
+				if strings.Contains(elem.MatchMessage, value) {
+					elem.MatchMessage = strings.ReplaceAll(elem.MatchMessage, value, redactedText)
+				}
 			}
 		}
 
