@@ -17,6 +17,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/data"
 	"github.com/census-instrumentation/opencensus-service/processor"
+	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/common"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor/inspector"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
@@ -24,7 +25,6 @@ import (
 )
 
 const (
-	redactedText      = "***"
 	dlpTag            = "traceable.filter.dlp"
 	inspectorTag      = "traceable.apidefinition.inspection"
 	queryParamTag     = "http.request.query.param"
@@ -489,7 +489,7 @@ func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, val
 	var isRedacted bool
 	switch redact {
 	case Redact:
-		redacted = redactedText
+		redacted = common.RedactedText
 		isRedacted = true
 	case Hash:
 		redacted = HashValue(value)
@@ -498,7 +498,7 @@ func (pfp *piifilterprocessor) redactAndFilterData(redact RedactionStrategy, val
 		redacted = value
 		isRedacted = false
 	default:
-		redacted = redactedText
+		redacted = common.RedactedText
 		isRedacted = true
 	}
 
@@ -524,9 +524,9 @@ func (pfp *piifilterprocessor) redactString(value string) (bool, string) {
 		redacted := fmt.Sprintf("%x", h)
 		return false, redacted
 	case Redact:
-		return true, redactedText
+		return true, common.RedactedText
 	default:
-		return true, redactedText
+		return true, common.RedactedText
 	}
 }
 
