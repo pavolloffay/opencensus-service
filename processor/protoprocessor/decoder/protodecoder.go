@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
-// TODO: Add error messages
+// Taken from protowire package.
 const (
 	_ = -iota
 	errCodeTruncated
@@ -22,12 +22,20 @@ type Protodecoder struct {
 	logger *zap.Logger
 }
 
+// NewProtoDecoder returns a new protodecoder object which can be used for decoding
+// protobufs messages. The decoding of protobuf is based on the proto wire format
+// defined here: https://developers.google.com/protocol-buffers/docs/encoding.
+// The strategy of protobuf decoding is similar to what we get when decoding is
+// done using protoc --decode_raw
 func NewProtoDecoder(logger *zap.Logger) *Protodecoder {
 	return &Protodecoder{
 		logger: logger,
 	}
 }
 
+// Decode when called on bytes returns an object which follows the
+// proto message hierarchy closely. Field identifiers are converted
+// to string keys and values are associatd to these keys
 func (pd *Protodecoder) Decode(b []byte) (interface{}, int) {
 	length := len(b)
 	parsed := 0
@@ -44,13 +52,18 @@ func (pd *Protodecoder) Decode(b []byte) (interface{}, int) {
 		// Update map for array
 		pd.updateMap(out, strconv.Itoa(int(num)), val)
 
-		// TODO: Add consumed check for consumed value > len of pending
+		if consumed > len(pending) {
+			return nil, errCodeTruncated
+		}
 		pending = pending[consumed:]
 		parsed += consumed
 	}
 	return out, parsed
 }
 
+// updateMap updates the key value map. If a key is already present in the map, then if the
+// associatd value is a list, we append the new value to the list. If the existing value is
+// not a list then a list is created and values are added to the new list.
 func (pd *Protodecoder) updateMap(m map[string]interface{}, key string, val interface{}) {
 	existing, ok := m[key]
 	if !ok {
@@ -71,13 +84,17 @@ func (pd *Protodecoder) updateMap(m map[string]interface{}, key string, val inte
 	return
 }
 
-// TODO: Add reasoning for using float instead of unint
+// decodeKeyVal deals with decoding of messages based on the type of message.
+// Note: For decoding Fixed32 and Fixed64 type, default strategy is to decode
+// to float32/64. In case decoding fails in such case, fallback to uint64
 func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int) {
 	num, tag, consumed := protowire.ConsumeTag(b)
 	if consumed < 0 {
 		return -1, tag, nil, consumed
 	}
-	// TODO: Add consumed check for consumed value > len of pending
+	if consumed > len(b) {
+		return -1, tag, nil, errCodeTruncated
+	}
 	val := b[consumed:]
 
 	switch tag {
@@ -139,7 +156,10 @@ func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type
 			} else {
 				pd.updateMap(out, strconv.Itoa(int(num2)), ret)
 			}
-			// TODO: Add consumed check for consumed value > len of pending
+
+			if n > len(val) {
+				return -1, tag, nil, errCodeTruncated
+			}
 			val = val[n:]
 		}
 	case protowire.EndGroupType:
