@@ -1,7 +1,6 @@
 package decoder
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
@@ -62,6 +61,7 @@ func (pd *Protodecoder) updateMap(m map[string]interface{}, key string, val inte
 	switch tt := existing.(type) {
 	case []interface{}:
 		existing = append(tt, val)
+		m[key] = existing
 	case interface{}:
 		newVal := make([]interface{}, 0)
 		newVal = append(newVal, tt)
@@ -71,12 +71,12 @@ func (pd *Protodecoder) updateMap(m map[string]interface{}, key string, val inte
 	return
 }
 
+// TODO: Add reasoning for using float instead of unint
 func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int) {
 	num, tag, consumed := protowire.ConsumeTag(b)
 	if consumed < 0 {
 		return -1, tag, nil, consumed
 	}
-	fmt.Println(num, tag, consumed)
 	// TODO: Add consumed check for consumed value > len of pending
 	val := b[consumed:]
 
@@ -87,7 +87,6 @@ func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type
 			return -1, tag, nil, n
 		}
 		consumed += n
-		fmt.Println(num, ret, consumed)
 		return num, tag, ret, consumed
 	case protowire.Fixed32Type:
 		ret, n := protowire.ConsumeFixed32(val)
@@ -95,8 +94,10 @@ func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type
 			return -1, tag, nil, n
 		}
 		consumed += n
-		fmt.Println(num, math.Float32frombits(ret), consumed)
-		fmt.Println(num, math.Float32bits(math.Float32frombits(ret)), consumed)
+		float32Rep := math.Float32frombits(ret)
+		if math.IsNaN(float64(float32Rep)) {
+			return num, tag, ret, consumed
+		}
 		return num, tag, math.Float32frombits(ret), consumed
 	case protowire.Fixed64Type:
 		ret, n := protowire.ConsumeFixed64(val)
@@ -104,18 +105,17 @@ func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type
 			return -1, tag, nil, n
 		}
 		consumed += n
-		fmt.Println(num, math.Float64frombits(ret), consumed)
-		fmt.Println(num, math.Float64bits(math.Float64frombits(ret)), consumed)
+		float64Rep := math.Float64frombits(ret)
+		if math.IsNaN(float64Rep) {
+			return num, tag, ret, consumed
+		}
 		return num, tag, math.Float64frombits(ret), consumed
 	case protowire.BytesType:
 		ret, n := protowire.ConsumeBytes(val)
-		fmt.Println(ret, n)
 		if n < 0 {
 			return -1, tag, nil, n
 		}
-
 		out, y := pd.Decode(ret)
-		fmt.Println(out, y)
 		if y == len(ret) {
 			consumed += n
 			return num, tag, out, consumed
@@ -123,7 +123,6 @@ func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type
 		str := string(ret)
 		consumed += n
 		return num, tag, str, consumed
-
 	case protowire.StartGroupType:
 		out := make(map[string]interface{})
 		for {

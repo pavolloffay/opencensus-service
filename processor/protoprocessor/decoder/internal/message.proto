@@ -13,6 +13,7 @@ message Coverage {
   enum CoverageEnum {
     ENUM1 = 0;
     ENUM2 = 1;
+    ENUM3 = 100;
   }
   CoverageEnum varEnum = 88;
   fixed64 varFixed64 = 99;
@@ -20,7 +21,8 @@ message Coverage {
   double varDouble = 1111;
   fixed32 varFixed32 = 1212;
   sfixed32 varSfixed32 = 1313;
-  float varFloar = 1414;
+  float varFloat = 1414;
+  repeated string varString = 1515;
 }
 
 
@@ -46,5 +48,6 @@ message Person {
 message AddressBook {
   int32 id = 10;
   repeated int32 val = 15;
+  repeated string stringVals = 17;
   repeated Person people = 20;
 }
