@@ -22,6 +22,7 @@ const (
 	grpcResponseBodyEncodedTag = grpcResponseBodyTag + ".encoded"
 )
 
+// Protodecoder defines configuration for protoprocessor
 type ProtoDecoder struct {
 	Enabled         *bool `mapstructure:"enabled,omitempty"`
 	StripEncodedTag *bool `mapstructure:"strip-encoded-tag,omitempty"`
@@ -36,6 +37,7 @@ type protoprocessor struct {
 	protoDecoder    *decoder.Protodecoder
 }
 
+// NewTraceProcessor returns a protoprocessor
 func NewTraceProcessor(nextConsumer consumer.TraceConsumer, protoDecoder *ProtoDecoder, logger *zap.Logger) (processor.TraceProcessor, error) {
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
@@ -63,6 +65,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, protoDecoder *ProtoD
 	}, nil
 }
 
+//
 func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !processor.enabled {
 		return processor.nextConsumer.ConsumeTraceData(ctx, td)

@@ -236,8 +236,8 @@ func testJaegerAgent(t *testing.T, agentEndpoint string, receiverConfig *Configu
 			},
 		},
 	}
-	x := cmpopts.IgnoreUnexported(timestamppb.Timestamp{}, timestamp.Timestamp{})
-	if diff := cmp.Diff(got, want, x); diff != "" {
+	opts := cmpopts.IgnoreUnexported(timestamppb.Timestamp{}, timestamp.Timestamp{})
+	if diff := cmp.Diff(got, want, opts); diff != "" {
 		t.Errorf("Mismatched responses\n-Got +Want:\n\t%s", diff)
 	}
 }
