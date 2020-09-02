@@ -1,0 +1,50 @@
+syntax = "proto3";
+package protomessage;
+option go_package = ".;pb";
+
+message Coverage {
+  int32 varInt32 = 11;
+  int64 varInt64 = 22;
+  uint32 varUint32 = 33;
+  uint64 varUint64 = 44;
+  sint32 varSint32 = 55;
+  sint64 varSint64 = 66;
+  bool varBool = 77;
+  enum CoverageEnum {
+    ENUM1 = 0;
+    ENUM2 = 1;
+  }
+  CoverageEnum varEnum = 88;
+  fixed64 varFixed64 = 99;
+  sfixed64 varSfixed64 = 1010;
+  double varDouble = 1111;
+  fixed32 varFixed32 = 1212;
+  sfixed32 varSfixed32 = 1313;
+  float varFloar = 1414;
+}
+
+
+message Person {
+  string name = 33;
+  int32 id = 44;
+  string email = 55;
+
+  enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+  }
+
+  message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2;
+  }
+
+  repeated PhoneNumber phones = 66;
+}
+
+message AddressBook {
+  int32 id = 10;
+  repeated int32 val = 15;
+  repeated Person people = 20;
+}

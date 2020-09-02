@@ -5,9 +5,11 @@ import (
 	"math"
 	"strconv"
 
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
+// TODO: Add error messages
 const (
 	_ = -iota
 	errCodeTruncated
@@ -17,8 +19,40 @@ const (
 	errCodeEndGroup
 )
 
-// Add test case for repeated int
-func updateMap(m map[string]interface{}, key string, val interface{}) {
+type Protodecoder struct {
+	logger *zap.Logger
+}
+
+func NewProtoDecoder(logger *zap.Logger) *Protodecoder {
+	return &Protodecoder{
+		logger: logger,
+	}
+}
+
+func (pd *Protodecoder) Decode(b []byte) (interface{}, int) {
+	length := len(b)
+	parsed := 0
+	out := make(map[string]interface{})
+	pending := b
+	for {
+		if parsed >= length {
+			break
+		}
+		num, _, val, consumed := pd.decodeKeyVal(pending)
+		if consumed < 0 {
+			return nil, consumed
+		}
+		// Update map for array
+		pd.updateMap(out, strconv.Itoa(int(num)), val)
+
+		// TODO: Add consumed check for consumed value > len of pending
+		pending = pending[consumed:]
+		parsed += consumed
+	}
+	return out, parsed
+}
+
+func (pd *Protodecoder) updateMap(m map[string]interface{}, key string, val interface{}) {
 	existing, ok := m[key]
 	if !ok {
 		m[key] = val
@@ -37,34 +71,13 @@ func updateMap(m map[string]interface{}, key string, val interface{}) {
 	return
 }
 
-func Decode(b []byte) (interface{}, int) {
-	length := len(b)
-	parsed := 0
-	out := make(map[string]interface{})
-	pending := b
-	for {
-		if parsed >= length {
-			break
-		}
-		num, _, val, consumed := decodeKeyVal(pending)
-		if consumed < 0 {
-			return nil, consumed
-		}
-		// Update map for array
-		updateMap(out, strconv.Itoa(int(num)), val)
-
-		pending = pending[consumed:]
-		parsed += consumed
-	}
-	return out, parsed
-}
-
-func decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int) {
+func (pd *Protodecoder) decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int) {
 	num, tag, consumed := protowire.ConsumeTag(b)
 	if consumed < 0 {
 		return -1, tag, nil, consumed
 	}
 	fmt.Println(num, tag, consumed)
+	// TODO: Add consumed check for consumed value > len of pending
 	val := b[consumed:]
 
 	switch tag {
@@ -101,7 +114,7 @@ func decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int)
 			return -1, tag, nil, n
 		}
 
-		out, y := Decode(ret)
+		out, y := pd.Decode(ret)
 		fmt.Println(out, y)
 		if y == len(ret) {
 			consumed += n
@@ -114,7 +127,7 @@ func decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int)
 	case protowire.StartGroupType:
 		out := make(map[string]interface{})
 		for {
-			num2, tag2, ret, n := decodeKeyVal(val)
+			num2, tag2, ret, n := pd.decodeKeyVal(val)
 			if n < 0 {
 				return -1, tag, nil, n
 			}
@@ -125,8 +138,9 @@ func decodeKeyVal(b []byte) (protowire.Number, protowire.Type, interface{}, int)
 				}
 				return num, tag, out, consumed
 			} else {
-				updateMap(out, strconv.Itoa(int(num2)), ret)
+				pd.updateMap(out, strconv.Itoa(int(num2)), ret)
 			}
+			// TODO: Add consumed check for consumed value > len of pending
 			val = val[n:]
 		}
 	case protowire.EndGroupType:
