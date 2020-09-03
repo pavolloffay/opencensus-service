@@ -18,10 +18,14 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 	tr := true
 	fl := false
 
-	encodedProtobuf := "C7MB6xTjlQLklQLsFLQBDMO4AgiVmu86ZRXNWwfZBxXNWwcAAAAAkk0FaGVsbG/LgwZYlZrvOuVLFc1bB5mPPBXNWwcAAAAAkv+JLwdnb29kYnllzIMGxLgC"
-	decodedProtobuf := `{"1":{"22":{"333":{"4444":{}}}},` +
-		`"5000":{"1":123456789,"12":1.6535997e-34,"123":6.0995758e-316,"1234":"hello",` +
-		`"12345":{"11":123456789,"1212":1.6535997e-34,"123123":6.0995758e-316,"12341234":"goodbye"}}}`
+	encodedGrpcProtobuf := "AAAAADoKJVBhdHJpb3RzIFBhdGgsIE1lbmRoYW0sIE5KIDA3OTQ1LCBVU0ESEQiPvbzCARDt" +
+		"/5qc/f////8BAAAAAD8KKjEwMSBOZXcgSmVyc2V5IDEwLCBXaGlwcGFueSwgTkogMDc5ODEsIFVTQRIRCLjrzcIBELXyn" +
+		"Z39/////wEAAAAAMwoeVS5TLiA2LCBTaG9ob2xhLCBQQSAxODQ1OCwgVVNBEhEI/O2dxQEQ1Nzrmv3/////AQAAAAA8Ci" +
+		"c1IENvbm5lcnMgUm9hZCwgS2luZ3N0b24sIE5ZIDEyNDAxLCBVU0ESEQi43qLIARDAqvue/f////8B"
+	decodedGrpcProtobuf := `[{"1":"Patriots Path, Mendham, NJ 07945, USA","2":{"1":407838351,"2":18446744072963407853}},` +
+		`{"1":"101 New Jersey 10, Whippany, NJ 07981, USA","2":{"1":408122808,"2":18446744072965552437}},` +
+		`{"1":"U.S. 6, Shohola, PA 18458, USA","2":{"1":413628156,"2":18446744072960536148}},` +
+		`{"1":"5 Conners Road, Kingston, NY 12401, USA","2":{"1":419999544,"2":18446744072969180480}}]`
 
 	tests := []struct {
 		name string
@@ -42,7 +46,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"grpc.request.body.encoded": {
-									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
 							},
 						},
@@ -57,10 +61,10 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"grpc.request.body.encoded": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 									},
 									"grpc.request.body": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
 								},
 							},
@@ -82,7 +86,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"grpc.response.body.encoded": {
-									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
 							},
 						},
@@ -97,10 +101,10 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"grpc.response.body.encoded": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 									},
 									"grpc.response.body": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
 								},
 							},
@@ -122,7 +126,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"grpc.request.body.encoded": {
-									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
 							},
 						},
@@ -137,7 +141,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"grpc.request.body": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
 								},
 							},
@@ -159,7 +163,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"grpc.response.body.encoded": {
-									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
 							},
 						},
@@ -174,7 +178,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"grpc.response.body": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
 								},
 							},
@@ -196,7 +200,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
 								"grpc.response.body.encoded": {
-									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
 							},
 						},
@@ -211,7 +215,7 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
 									"grpc.response.body.encoded": {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedProtobuf}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 									},
 								},
 							},
@@ -245,6 +249,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 
 				// Strings are JSON objects
 				if strings.HasPrefix(s1.Value, "{") && strings.HasPrefix(s2.Value, "{") {
+					return gomega.Expect(s1.Value).Should(gomega.MatchJSON(s2.Value))
+				}
+				if strings.HasPrefix(s1.Value, "[") && strings.HasPrefix(s2.Value, "[") {
 					return gomega.Expect(s1.Value).Should(gomega.MatchJSON(s2.Value))
 				}
 

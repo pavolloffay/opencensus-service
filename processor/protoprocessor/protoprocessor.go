@@ -34,7 +34,7 @@ type protoprocessor struct {
 	stripEncodedTag bool
 	enabled         bool
 	tagMap          map[string]string
-	protoDecoder    *decoder.Protodecoder
+	grpcDecoder     *decoder.Grpcdecoder
 }
 
 // NewTraceProcessor returns a protoprocessor
@@ -61,7 +61,7 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, protoDecoder *ProtoD
 		enabled:         enabled,
 		stripEncodedTag: stripEncodedTag,
 		tagMap:          tagMap,
-		protoDecoder:    decoder.NewProtoDecoder(logger),
+		grpcDecoder:     decoder.NewGrpcDecoder(logger),
 	}, nil
 }
 
@@ -91,7 +91,7 @@ func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.T
 					processor.logger.Debug("Unable to decode value for key", zap.String("key", key), zap.String("value", tagValue))
 					continue
 				}
-				decodedMsg, parsedLen := processor.protoDecoder.Decode(raw)
+				decodedMsg, parsedLen := processor.grpcDecoder.Decode(raw)
 				if parsedLen < 0 {
 					processor.logger.Debug("Error while parsing message", zap.Int("erro code", parsedLen))
 					continue

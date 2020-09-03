@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func Test_decoder_coverage(t *testing.T) {
+func Test_protodecoder_coverage(t *testing.T) {
 	strArr := &pb.Coverage{}
 	strArr.VarString = append(strArr.VarString, "string1")
 	strArr.VarString = append(strArr.VarString, "string2")
@@ -42,7 +42,16 @@ func Test_decoder_coverage(t *testing.T) {
 	addressBook.People = append(addressBook.People, &p)
 	addressBook.People = append(addressBook.People, &p)
 
-	encodedGroup := "0bb301eb14e39502e49502ec14b4010cc3b80208959aef3a6515cd5b07d90715cd5b0700000000924d0568656c6c6fcb830658959aef3ae54b15cd5b07998f3c15cd5b070000000092ff892f07676f6f64627965cc8306c4b802"
+	encodedGroup := "0bb301eb14e39502e49502ec14b4010cc3b80208959aef3a6515cd5b07d90715cd5b0700000000" +
+		"924d0568656c6c6fcb830658959aef3ae54b15cd5b07998f3c15cd5b070000000092ff892f07676f6f64627965cc8306c4b802"
+	addressBookDecodedJson := `{"17":["string1","string2","string3","string4"],` +
+		`"20":[{"33":"John Doe","44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"1":"111-7890","2":2}]},` +
+		`{"33":"John Doe","44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"1":"111-7890","2":2}]},` +
+		`{"44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"2":2,"1":"111-7890"}],"33":"John Doe"}],` +
+		`"10":3030,"15":"\ufffd\u0008\ufffd\u0011\ufffd\u001a"}`
+	groupDecodedJson := `{"1":{"22":{"333":{"4444":{}}}},` +
+		`"5000":{"1":123456789,"12":1.6535997e-34,"123":6.0995758e-316,"1234":"hello",` +
+		`"12345":{"11":123456789,"1212":1.6535997e-34,"123123":6.0995758e-316,"12341234":"goodbye"}}}`
 
 	tests := []struct {
 		name          string
@@ -235,20 +244,14 @@ func Test_decoder_coverage(t *testing.T) {
 			wantJson: `{"1515":["string1","string2","string3","string4"]}`,
 		},
 		{
-			name:    "check_addressbook",
-			message: addressBook,
-			wantJson: `{"17":["string1","string2","string3","string4"],
-			"20":[{"33":"John Doe","44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"1":"111-7890","2":2}]},
-			{"33":"John Doe","44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"1":"111-7890","2":2}]},
-			{"44":1234,"55":"jdoe@example.com","66":[{"1":"555-4321","2":1},{"2":2,"1":"111-7890"}],"33":"John Doe"}],
-			"10":3030,"15":"\ufffd\u0008\ufffd\u0011\ufffd\u001a"}`,
+			name:     "check_addressbook",
+			message:  addressBook,
+			wantJson: addressBookDecodedJson,
 		},
 		{
 			name:       "check_group",
 			serialized: encodedGroup,
-			wantJson: `{"1":{"22":{"333":{"4444":{}}}},
-			"5000":{"1":123456789,"12":1.6535997e-34,"123":6.0995758e-316,"1234":"hello",
-			"12345":{"11":123456789,"1212":1.6535997e-34,"123123":6.0995758e-316,"12341234":"goodbye"}}}`,
+			wantJson:   groupDecodedJson,
 		},
 	}
 	logger := zap.New(zapcore.NewNopCore())
