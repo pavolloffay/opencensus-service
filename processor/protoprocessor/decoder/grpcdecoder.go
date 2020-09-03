@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -43,9 +42,7 @@ func (gd *Grpcdecoder) Decode(b []byte) (interface{}, int) {
 		if parsed >= length {
 			break
 		}
-		if len(pending) <= minimumByteCount {
-			fmt.Println("Error while parsing section len")
-
+		if len(pending) < minimumByteCount {
 			if parsedMessageCount > 0 {
 				return out, parsed
 			} else {
@@ -59,7 +56,6 @@ func (gd *Grpcdecoder) Decode(b []byte) (interface{}, int) {
 		if messageLen > len(pending[messageStartIndex:]) {
 
 			if parsedMessageCount > 0 {
-				fmt.Println("Error in parsed message count")
 				return out, parsed
 			} else {
 				return nil, errCodeTruncated
@@ -73,8 +69,6 @@ func (gd *Grpcdecoder) Decode(b []byte) (interface{}, int) {
 			if consumed >= 0 {
 				out = append(out, decoded)
 				parsedMessageCount += 1
-			} else {
-				fmt.Println("Error while decoding proto")
 			}
 		}
 
