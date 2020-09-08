@@ -20,10 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
@@ -221,8 +218,7 @@ func TestReception(t *testing.T) {
 		},
 	}
 
-	opts := cmpopts.IgnoreUnexported(timestamppb.Timestamp{}, timestamp.Timestamp{})
-	if diff := cmp.Diff(got, want, opts); diff != "" {
+	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("Mismatched responses\n-Got +Want:\n\t%s", diff)
 	}
 }
