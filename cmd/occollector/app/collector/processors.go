@@ -37,7 +37,6 @@ import (
 	"github.com/census-instrumentation/opencensus-service/processor/enduserprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/multiconsumer"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
-	"github.com/census-instrumentation/opencensus-service/processor/protoprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/tenantidprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/tracesamplerprocessor"
 )
@@ -362,12 +361,6 @@ func startProcessor(v *viper.Viper, logger *zap.Logger) (consumer.TraceConsumer,
 			tp, err = enduserprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.Endusers, logger)
 			if err != nil {
 				logger.Warn("Failed to build the enduser processor: ", zap.Error(err))
-			}
-		}
-		if multiProcessorCfg.Global.Attributes.ProtoDecoder != nil {
-			tp, err = protoprocessor.NewTraceProcessor(tp, multiProcessorCfg.Global.Attributes.ProtoDecoder, logger)
-			if err != nil {
-				logger.Warn("Failed to build the proto processor: ", zap.Error(err))
 			}
 		}
 		if multiProcessorCfg.Global.Attributes.TenantIDReaderEnabled {

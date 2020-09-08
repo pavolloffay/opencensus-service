@@ -22,7 +22,6 @@ import (
 	"github.com/census-instrumentation/opencensus-service/processor/attributekeyprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/enduserprocessor"
 	"github.com/census-instrumentation/opencensus-service/processor/piifilterprocessor"
-	"github.com/census-instrumentation/opencensus-service/processor/protoprocessor"
 )
 
 // SenderType indicates the type of sender
@@ -138,7 +137,6 @@ type AttributesCfg struct {
 	KeyReplacements       []attributekeyprocessor.KeyReplacement `mapstructure:"key-mapping,omitempty"`
 	Endusers              []enduserprocessor.Enduser             `mapstructure:"enduser,omitempty"`
 	PiiFilter             *piifilterprocessor.PiiFilter          `mapstructure:"pii-filter,omitempty"`
-	ProtoDecoder          *protoprocessor.ProtoDecoder           `mapstructure:"proto-decoder,omitempty"`
 	TenantIDReaderEnabled bool                                   `mapstructure:"tenantid-reader-enabled"`
 }
 
