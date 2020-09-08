@@ -1,3 +1,4 @@
+// TODO: Move it out from here when moving to otel collector
 syntax = "proto3";
 package protomessage;
 option go_package = ".;pb";

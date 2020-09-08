@@ -9,6 +9,7 @@ import (
 )
 
 // Taken from protowire package.
+// https://github.com/protocolbuffers/protobuf-go/blob/master/encoding/protowire/wire.go#L51
 const (
 	_ = -iota
 	errCodeTruncated

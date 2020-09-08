@@ -18,8 +18,8 @@ import (
 const (
 	grpcRequestBodyTag         = "grpc.request.body"
 	grpcResponseBodyTag        = "grpc.response.body"
-	grpcRequestBodyEncodedTag  = grpcRequestBodyTag + ".encoded"
-	grpcResponseBodyEncodedTag = grpcResponseBodyTag + ".encoded"
+	grpcRequestBodyEncodedTag  = grpcRequestBodyTag + ".base64"
+	grpcResponseBodyEncodedTag = grpcResponseBodyTag + ".base64"
 )
 
 // Protodecoder defines configuration for protoprocessor
@@ -65,7 +65,6 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, protoDecoder *ProtoD
 	}, nil
 }
 
-//
 func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.TraceData) error {
 	if !processor.enabled {
 		return processor.nextConsumer.ConsumeTraceData(ctx, td)
@@ -84,44 +83,52 @@ func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.T
 				continue
 			}
 			if _, ok := processor.tagMap[key]; ok {
-				// Decode the value in this case
-				tagValue := value.GetStringValue().Value
-				raw, err := b64.StdEncoding.DecodeString(tagValue)
-				if err != nil {
-					processor.logger.Debug("Unable to decode value for key", zap.String("key", key), zap.String("value", tagValue))
-					continue
-				}
-				decodedMsg, parsedLen := processor.grpcDecoder.Decode(raw)
-				if parsedLen < 0 {
-					processor.logger.Debug("Error while parsing message", zap.Int("erro code", parsedLen))
-					continue
-				}
-				decodedMsgJson, err := jsoniter.MarshalToString(decodedMsg)
-				if err != nil {
-					processor.logger.Debug("Error while creating json", zap.Error(err))
-					continue
-				}
-				decodedAttributes[key] = decodedMsgJson
+				processor.processValue(key, value, decodedAttributes)
 			}
 		}
-		for key, decodedVaue := range decodedAttributes {
-			decodedKey, ok := processor.tagMap[key]
-			if !ok {
-				processor.logger.Debug("Unknown key decoded", zap.String("key", key), zap.String("value", decodedVaue))
-				continue
-			}
-
-			processor.addAttribute(span, decodedKey, decodedVaue)
-
-			if processor.stripEncodedTag {
-				if _, ok := span.GetAttributes().AttributeMap[key]; ok {
-					delete(span.GetAttributes().AttributeMap, key)
-				}
-			}
+		for key, decodedValue := range decodedAttributes {
+			processor.updateDecodedValue(span, key, decodedValue)
 		}
 	}
 
 	return processor.nextConsumer.ConsumeTraceData(ctx, td)
+}
+
+func (processor *protoprocessor) processValue(key string, value *tracepb.AttributeValue, decodedAttributes map[string]string) {
+	// Decode the value in this case
+	tagValue := value.GetStringValue().Value
+	raw, err := b64.StdEncoding.DecodeString(tagValue)
+	if err != nil {
+		processor.logger.Debug("Unable to decode value for key", zap.String("key", key), zap.String("value", tagValue))
+		return
+	}
+	decodedMsg, parsedLen := processor.grpcDecoder.Decode(raw)
+	if parsedLen < 0 {
+		processor.logger.Debug("Error while parsing message", zap.Int("erro code", parsedLen))
+		return
+	}
+	decodedMsgJson, err := jsoniter.MarshalToString(decodedMsg)
+	if err != nil {
+		processor.logger.Debug("Error while creating json", zap.Error(err))
+		return
+	}
+	decodedAttributes[key] = decodedMsgJson
+}
+
+func (processor *protoprocessor) updateDecodedValue(span *tracepb.Span, key string, decodedValue string) {
+	decodedKey, ok := processor.tagMap[key]
+	if !ok {
+		processor.logger.Debug("Unknown key decoded", zap.String("key", key), zap.String("value", decodedValue))
+		return
+	}
+
+	processor.addAttribute(span, decodedKey, decodedValue)
+
+	if processor.stripEncodedTag {
+		if _, ok := span.GetAttributes().AttributeMap[key]; ok {
+			delete(span.GetAttributes().AttributeMap, key)
+		}
+	}
 }
 
 func (processor *protoprocessor) addAttribute(span *tracepb.Span, key string, value string) {

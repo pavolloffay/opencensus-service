@@ -54,7 +54,6 @@ func (gd *Grpcdecoder) Decode(b []byte) (interface{}, int) {
 		compressed := int(pending[compressedByteIndex])
 		messageLen := int(binary.BigEndian.Uint32(pending[lengthByteStartIndex:messageStartIndex]))
 		if messageLen > len(pending[messageStartIndex:]) {
-
 			if parsedMessageCount > 0 {
 				return out, parsed
 			} else {
@@ -70,6 +69,8 @@ func (gd *Grpcdecoder) Decode(b []byte) (interface{}, int) {
 				out = append(out, decoded)
 				parsedMessageCount += 1
 			}
+		} else {
+			gd.logger.Debug("Compressed grpc message. Ignoring.", zap.Int("compressed code", compressed))
 		}
 
 		pending = pending[sectionLen:]
