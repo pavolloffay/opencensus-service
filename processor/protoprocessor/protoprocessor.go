@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	grpcRequestBodyTag         = "grpc.request.body"
-	grpcResponseBodyTag        = "grpc.response.body"
+	grpcRequestBodyTag         = "rpc.request.body"
+	grpcResponseBodyTag        = "rpc.response.body"
 	grpcRequestBodyEncodedTag  = grpcRequestBodyTag + ".base64"
 	grpcResponseBodyEncodedTag = grpcResponseBodyTag + ".base64"
 )
