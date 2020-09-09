@@ -4,7 +4,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/census-instrumentation/opencensus-service/processor/protoprocessor/decoder/protowire"
+	protowire "github.com/census-instrumentation/opencensus-service/thirdparty"
 	"go.uber.org/zap"
 )
 

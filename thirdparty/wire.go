@@ -8,7 +8,7 @@
 // For marshaling and unmarshaling entire protobuf messages,
 // use the "google.golang.org/protobuf/proto" package instead.
 // TODO: When moving to opentelemetry, use the right package
-package protowire
+package thirdparty
 
 import (
 	"math"
