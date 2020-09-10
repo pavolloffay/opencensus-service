@@ -45,6 +45,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+								},
 								"rpc.request.body.base64": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
@@ -60,6 +63,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+									},
 									"rpc.request.body.base64": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 									},
@@ -85,6 +91,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+								},
 								"rpc.response.body.base64": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
@@ -100,6 +109,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+									},
 									"rpc.response.body.base64": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 									},
@@ -125,6 +137,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+								},
 								"rpc.request.body.base64": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
@@ -140,6 +155,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+									},
 									"rpc.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
@@ -162,6 +180,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 						Name: &tracepb.TruncatableString{Value: "test"},
 						Attributes: &tracepb.Span_Attributes{
 							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+								},
 								"rpc.response.body.base64": {
 									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
 								},
@@ -177,6 +198,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 							Name: &tracepb.TruncatableString{Value: "test"},
 							Attributes: &tracepb.Span_Attributes{
 								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+									},
 									"rpc.response.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
@@ -191,6 +215,92 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 			name: "disabled",
 			args: ProtoDecoder{
 				Enabled:         &fl,
+				StripEncodedTag: &tr,
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+								},
+								"rpc.response.body.base64": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "grpc"}},
+									},
+									"rpc.response.body.base64": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "rpc_system_non_grpc",
+			args: ProtoDecoder{
+				Enabled:         &tr,
+				StripEncodedTag: &tr,
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.system": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "wcf"}},
+								},
+								"rpc.response.body.base64": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.system": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "wcf"}},
+									},
+									"rpc.response.body.base64": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: encodedGrpcProtobuf}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "no_rpc_system_defined",
+			args: ProtoDecoder{
+				Enabled:         &tr,
 				StripEncodedTag: &tr,
 			},
 			td: data.TraceData{

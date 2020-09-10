@@ -16,10 +16,12 @@ import (
 )
 
 const (
-	grpcRequestBodyTag         = "rpc.request.body"
-	grpcResponseBodyTag        = "rpc.response.body"
-	grpcRequestBodyEncodedTag  = grpcRequestBodyTag + ".base64"
-	grpcResponseBodyEncodedTag = grpcResponseBodyTag + ".base64"
+	rpcSystemTag              = "rpc.system"
+	rpcSystemTagValue         = "grpc"
+	rpcRequestBodyTag         = "rpc.request.body"
+	rpcResponseBodyTag        = "rpc.response.body"
+	rpcRequestBodyEncodedTag  = rpcRequestBodyTag + ".base64"
+	rpcResponseBodyEncodedTag = rpcResponseBodyTag + ".base64"
 )
 
 // Protodecoder defines configuration for protoprocessor
@@ -52,8 +54,8 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, protoDecoder *ProtoD
 		stripEncodedTag = *protoDecoder.StripEncodedTag
 	}
 	tagMap := make(map[string]string)
-	tagMap[grpcRequestBodyEncodedTag] = grpcRequestBodyTag
-	tagMap[grpcResponseBodyEncodedTag] = grpcResponseBodyTag
+	tagMap[rpcRequestBodyEncodedTag] = rpcRequestBodyTag
+	tagMap[rpcResponseBodyEncodedTag] = rpcResponseBodyTag
 
 	return &protoprocessor{
 		nextConsumer:    nextConsumer,
@@ -77,6 +79,13 @@ func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.T
 		if len(attribMap) == 0 {
 			continue
 		}
+
+		if value, ok := span.Attributes.AttributeMap[rpcSystemTag]; !ok || value.GetStringValue().Value != rpcSystemTagValue {
+			// if  {
+			continue
+			// }
+		}
+
 		decodedAttributes := make(map[string]string)
 		for key, value := range span.Attributes.AttributeMap {
 			if value.GetStringValue() == nil {
