@@ -189,7 +189,9 @@ func compileRegexs(regexs []PiiElement, globalRedactionStrategy RedactionStrateg
 func mapRawToEnriched(rawTag string, path string) (string, string) {
 	enrichedTag := rawTag
 	enrichedPath := path
-	switch rawTag {
+
+	unindexedKey := strings.Split(rawTag, "[")[0]
+	switch unindexedKey {
 	case "http.url":
 		enrichedTag = queryParamTag
 	case "http.request.header.cookie":
@@ -238,7 +240,8 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 				continue
 			}
 
-			if _, ok := pfp.complexData[key]; ok {
+			unindexedKey := strings.Split(key, "[")[0]
+			if _, ok := pfp.complexData[unindexedKey]; ok {
 				// value filters on complex data are run as part of
 				// complex data filtering
 				continue
@@ -252,7 +255,7 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 		}
 
 		// complex data filtering is always matched on entire key, not
-		// prefixes, so can look up attribute directly, rather than iterating
+		// prefixes, so can look up attribute directly, rather than iterating n
 		// over all keys looking for a match
 		pfp.filterComplexData(span, filterData)
 
@@ -356,8 +359,13 @@ func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string,
 
 func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, filterData *FilterData) {
 	attribMap := span.GetAttributes().AttributeMap
-	for _, elem := range pfp.complexData {
-		if attrib, ok := attribMap[elem.Key]; ok {
+	for key, attrib := range span.Attributes.AttributeMap {
+		if attrib.GetStringValue() == nil {
+			continue
+		}
+
+		unindexedKey := strings.Split(key, "[")[0]
+		if elem, ok := pfp.complexData[unindexedKey]; ok {
 			var dataType string
 			if len(elem.Type) > 0 {
 				dataType = elem.Type

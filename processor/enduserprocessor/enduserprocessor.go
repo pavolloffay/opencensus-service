@@ -64,6 +64,7 @@ type enduserprocessor struct {
 	nextConsumer consumer.TraceConsumer
 	logger       *zap.Logger
 	endusers     []Enduser
+	enduserMap   map[string][]Enduser
 }
 
 // NewTraceProcessor creates a new end user processor which adds enduser attributes to spans when
@@ -72,11 +73,16 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, endusers []Enduser, 
 	if nextConsumer == nil {
 		return nil, errors.New("nextConsumer is nil")
 	}
+	enduserMap := make(map[string][]Enduser)
+	for _, enduser := range endusers {
+		enduserMap[enduser.Key] = append(enduserMap[enduser.Key], enduser)
+	}
 
 	return &enduserprocessor{
 		nextConsumer: nextConsumer,
 		logger:       logger,
 		endusers:     endusers,
+		enduserMap:   enduserMap,
 	}, nil
 }
 
@@ -92,14 +98,16 @@ func (processor *enduserprocessor) ConsumeTraceData(ctx context.Context, td data
 
 		// iterate through enduer locations and see if
 		// the keys exist in the span
-		for _, enduser := range processor.endusers {
-			if attrib, ok := attribMap[enduser.Key]; ok {
-				value := attrib.GetStringValue()
-				if value == nil {
-					continue
+		for key, attrib := range attribMap {
+			value := attrib.GetStringValue()
+			if value == nil {
+				continue
+			}
+			unindexedKey := strings.Split(key, "[")[0]
+			if endusers, ok := processor.enduserMap[unindexedKey]; ok {
+				for _, enduser := range endusers {
+					processor.capture(span, enduser, value.Value)
 				}
-
-				processor.capture(span, enduser, value.Value)
 			}
 		}
 	}

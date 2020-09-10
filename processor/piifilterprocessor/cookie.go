@@ -21,7 +21,8 @@ func newCookieFilter(pfp *piifilterprocessor, logger *zap.Logger) *cookieFilter 
 }
 
 func parseCookies(key string, value string) []*http.Cookie {
-	switch key {
+	unindexedKey := strings.Split(key, "[")[0]
+	switch unindexedKey {
 	case "http.request.header.cookie":
 		header := http.Header{}
 		header.Add("Cookie", value)
