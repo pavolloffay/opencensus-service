@@ -63,7 +63,6 @@ type Enduser struct {
 type enduserprocessor struct {
 	nextConsumer consumer.TraceConsumer
 	logger       *zap.Logger
-	endusers     []Enduser
 	enduserMap   map[string][]Enduser
 }
 
@@ -81,7 +80,6 @@ func NewTraceProcessor(nextConsumer consumer.TraceConsumer, endusers []Enduser, 
 	return &enduserprocessor{
 		nextConsumer: nextConsumer,
 		logger:       logger,
-		endusers:     endusers,
 		enduserMap:   enduserMap,
 	}, nil
 }
