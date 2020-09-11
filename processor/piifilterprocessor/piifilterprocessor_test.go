@@ -80,6 +80,16 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		},
 	}`)
 
+	valueSetCookieInput1 := "shop_session-id=5a50d182-c7a2-4033-8e50-7138d80f6d15; Max-Age=172800"
+	valueSetCookieExpected1 := "shop_session-id=5a50d182-c7a2-4033-8e50-7138d80f6d15; Max-Age=172800"
+	valueSetCookieInput2 := "password=abc123; Max-Age=172800"
+	valueSetCookieExpected2 := "password=***; Max-Age=172800"
+	cookieDlpTagValueExpected := "[{\"key\":\"http.request.header.cookie\",\"path\":\"password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"http.response.header.set-cookie\",\"path\":\"password\",\"type\":\"sensitive\"}]"
+
+	valueCookieInput := "shop_session-id=cf43cd15-7a0f-4f3d-bc95-46f45031b3c9; password=def456"
+	valueCookieExpected := "shop_session-id=cf43cd15-7a0f-4f3d-bc95-46f45031b3c9; password=***"
+
 	tests := []struct {
 		name string
 		args PiiFilter
@@ -546,7 +556,75 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 				},
 			},
 		},
-
+		{
+			name: "cookie_filter",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "http.response.header.set-cookie",
+						Type: "cookie",
+					},
+					{
+						Key:  "http.request.header.cookie",
+						Type: "cookie",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"http.request.header.cookie": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueCookieInput}},
+								},
+								"http.response.header.set-cookie[0]": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueSetCookieInput1}},
+								},
+								"http.response.header.set-cookie[1]": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueSetCookieInput2}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"http.request.header.cookie": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueCookieExpected}},
+									},
+									"http.response.header.set-cookie[0]": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueSetCookieExpected1}},
+									},
+									"http.response.header.set-cookie[1]": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: valueSetCookieExpected2}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "OhoKCHBhc3N3b3JkEg4KDBIKCgIQAxAFGAYiAEIaCghwYXNzd29yZBIOCgwSCgoCEAMQBRgGIgA="}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: cookieDlpTagValueExpected}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		{
 			name: "multiple_attributes",
 			args: PiiFilter{
