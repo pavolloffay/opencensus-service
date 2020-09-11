@@ -190,7 +190,7 @@ func mapRawToEnriched(rawTag string, path string) (string, string) {
 	enrichedTag := rawTag
 	enrichedPath := path
 
-	unindexedKey := strings.Split(rawTag, "[")[0]
+	unindexedKey := UnindexedKey(rawTag)
 	switch unindexedKey {
 	case "http.url":
 		enrichedTag = queryParamTag
@@ -240,7 +240,7 @@ func (pfp *piifilterprocessor) ConsumeTraceData(ctx context.Context, td data.Tra
 				continue
 			}
 
-			unindexedKey := strings.Split(key, "[")[0]
+			unindexedKey := UnindexedKey(key)
 			if _, ok := pfp.complexData[unindexedKey]; ok {
 				// value filters on complex data are run as part of
 				// complex data filtering
@@ -364,7 +364,7 @@ func (pfp *piifilterprocessor) filterComplexData(span *tracepb.Span, filterData 
 			continue
 		}
 
-		unindexedKey := strings.Split(key, "[")[0]
+		unindexedKey := UnindexedKey(key)
 		if elem, ok := pfp.complexData[unindexedKey]; ok {
 			var dataType string
 			if len(elem.Type) > 0 {
@@ -521,6 +521,13 @@ func HashValue(value string) string {
 	h := make([]byte, 64)
 	sha3.ShakeSum256(h, []byte(value))
 	return fmt.Sprintf("%x", h)
+}
+
+func UnindexedKey(key string) string {
+	if len(key) == 0 {
+		return key
+	}
+	return strings.Split(key, "[")[0]
 }
 
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value

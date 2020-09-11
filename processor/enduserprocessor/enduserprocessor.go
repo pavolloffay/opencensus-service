@@ -103,7 +103,7 @@ func (processor *enduserprocessor) ConsumeTraceData(ctx context.Context, td data
 			if value == nil {
 				continue
 			}
-			unindexedKey := strings.Split(key, "[")[0]
+			unindexedKey := piifilterprocessor.UnindexedKey(key)
 			if endusers, ok := processor.enduserMap[unindexedKey]; ok {
 				for _, enduser := range endusers {
 					processor.capture(span, enduser, value.Value)
