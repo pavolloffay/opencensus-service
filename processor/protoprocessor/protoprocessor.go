@@ -17,7 +17,7 @@ import (
 
 const (
 	rpcSystemTag              = "rpc.system"
-	rpcSystemTagValue         = "grpc"
+	rpcSystemTagGrpcValue     = "grpc"
 	rpcRequestBodyTag         = "rpc.request.body"
 	rpcResponseBodyTag        = "rpc.response.body"
 	rpcRequestBodyEncodedTag  = rpcRequestBodyTag + ".base64"
@@ -80,10 +80,8 @@ func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.T
 			continue
 		}
 
-		if value, ok := span.Attributes.AttributeMap[rpcSystemTag]; !ok || value.GetStringValue().Value != rpcSystemTagValue {
-			// if  {
+		if value, ok := span.Attributes.AttributeMap[rpcSystemTag]; !ok || value.GetStringValue().Value != rpcSystemTagGrpcValue {
 			continue
-			// }
 		}
 
 		decodedAttributes := make(map[string]string)
