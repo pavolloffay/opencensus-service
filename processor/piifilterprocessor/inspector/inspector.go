@@ -18,6 +18,51 @@ const (
 	responseCookiePrefix = "http.response.cookie."
 )
 
+type paramType int
+
+const (
+	unknown paramType = iota
+	query
+	requestBody
+	requestHeader
+	requestCookie
+	responseBody
+	responseHeader
+	responseCookie
+)
+
+// stripParamPrefix identifies the paramType based on the prefix and
+// strips it.
+func stripPrefix(key string) (string, paramType) {
+	prefix := ""
+	prefixType := unknown
+	switch {
+	case strings.HasPrefix(key, queryParamPrefix):
+		prefix = queryParamPrefix
+		prefixType = query
+	case strings.HasPrefix(key, requestBodyPrefix):
+		prefix = requestBodyPrefix
+		prefixType = requestBody
+	case strings.HasPrefix(key, requestHeaderPrefix):
+		prefix = requestHeaderPrefix
+		prefixType = requestHeader
+	case strings.HasPrefix(key, requestCookiePrefix):
+		prefix = requestCookiePrefix
+		prefixType = requestCookie
+	case strings.HasPrefix(key, responseBodyPrefix):
+		prefix = responseBodyPrefix
+		prefixType = responseBody
+	case strings.HasPrefix(key, responseHeaderPrefix):
+		prefix = responseHeaderPrefix
+		prefixType = responseHeader
+	case strings.HasPrefix(key, responseCookiePrefix):
+		prefix = responseCookiePrefix
+		prefixType = responseCookie
+	}
+	normalizedKey := strings.TrimPrefix(key, prefix)
+	return normalizedKey, prefixType
+}
+
 // Struct for handling extracted values
 type Value struct {
 	OriginalValue string
@@ -72,48 +117,42 @@ func NewInspectorManager(logger *zap.Logger, modsecConfig ModsecConfig) *Inspect
 }
 
 func addParamValueInspections(message *pb.HttpApiInspection, key string, inspections *pb.ParamValueInspections) {
-	switch {
-	case strings.HasPrefix(key, queryParamPrefix):
+	normalizedKey, prefixType := stripPrefix(key)
+	switch prefixType {
+	case query:
 		if message.QueryParamInspection == nil {
 			message.QueryParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, queryParamPrefix)
 		message.QueryParamInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, requestBodyPrefix):
+	case requestBody:
 		if message.RequestBodyParamInspection == nil {
 			message.RequestBodyParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, requestBodyPrefix)
 		message.RequestBodyParamInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, requestHeaderPrefix):
+	case requestHeader:
 		if message.RequestHeaderParamInspection == nil {
 			message.RequestHeaderParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, requestHeaderPrefix)
 		message.RequestHeaderParamInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, requestCookiePrefix):
+	case requestCookie:
 		if message.RequestCookieInspection == nil {
 			message.RequestCookieInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, requestCookiePrefix)
 		message.RequestCookieInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, responseBodyPrefix):
+	case responseBody:
 		if message.ResponseBodyParamInspection == nil {
 			message.ResponseBodyParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, responseBodyPrefix)
 		message.ResponseBodyParamInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, responseHeaderPrefix):
+	case responseHeader:
 		if message.ResponseHeaderParamInspection == nil {
 			message.ResponseHeaderParamInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, responseHeaderPrefix)
 		message.ResponseHeaderParamInspection[normalizedKey] = inspections
-	case strings.HasPrefix(key, responseCookiePrefix):
+	case responseCookie:
 		if message.ResponseCookieInspection == nil {
 			message.ResponseCookieInspection = make(map[string]*pb.ParamValueInspections)
 		}
-		normalizedKey := strings.TrimPrefix(key, responseCookiePrefix)
 		message.ResponseCookieInspection[normalizedKey] = inspections
 	}
 }

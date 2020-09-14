@@ -55,7 +55,7 @@ func Test_ModsecInspector_multiValueKey(t *testing.T) {
 	assert.True(t, inspector != nil)
 
 	testAttrs := make(map[string][]*Value)
-	testAttrs["http.request.body.login"] = append(append(make([]*Value, 0), &Value{OriginalValue: "this"}), &Value{OriginalValue: "' or '1'='1"})
+	testAttrs["http.request.body.login"] = append(append(append(make([]*Value, 0), &Value{OriginalValue: ""}), &Value{OriginalValue: "' or '1'='1"}), &Value{OriginalValue: "this"})
 
 	message := &pb.HttpApiInspection{}
 	inspector.inspect(message, testAttrs)

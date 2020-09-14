@@ -59,17 +59,22 @@ func NewModsecInspector(logger *zap.Logger, modsecConfig ModsecConfig) modsecins
 
 func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToValuesMap map[string][]*Value) {
 	attrMap := make(map[string]string)
+	normalizedKeyMap := make(map[string][]string)
 	for key, values := range keyToValuesMap {
-
+		normalizedKey, _ := stripPrefix(key)
 		if len(values) == 1 {
 			attrMap[key] = values[0].OriginalValue
+			normalizedKeyMap[normalizedKey] = append(normalizedKeyMap[normalizedKey], key)
 		} else {
 			for idx, value := range values {
 				if value == nil {
 					continue
 				}
-				attrKey := key + "_" + strconv.Itoa(idx)
+				idxStr := strconv.Itoa(idx)
+				attrKey := key + "_" + idxStr
 				attrMap[attrKey] = value.OriginalValue
+				normalizedKeyIdx := normalizedKey + "_" + idxStr
+				normalizedKeyMap[normalizedKeyIdx] = append(normalizedKeyMap[normalizedKeyIdx], attrKey)
 			}
 		}
 	}
@@ -90,9 +95,15 @@ func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToVa
 
 	for _, elem := range ret {
 		if mi.redactSensitive {
-			for _, value := range attrMap {
-				if strings.Contains(elem.MatchMessage, value) {
-					elem.MatchMessage = strings.ReplaceAll(elem.MatchMessage, value, common.RedactedText)
+			for normalizedKey, keys := range normalizedKeyMap {
+				if strings.Contains(elem.MatchMessage, normalizedKey) {
+					for _, key := range keys {
+						value := attrMap[key]
+						if len(value) == 0 {
+							continue
+						}
+						elem.MatchMessage = strings.ReplaceAll(elem.MatchMessage, value, common.RedactedText)
+					}
 				}
 			}
 		}
