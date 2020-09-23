@@ -28,6 +28,8 @@ containerPorts:
     containerPort: 55678
   - name: http-jaeger
     containerPort: 14268
+  - name: http-zipkin
+    containerPort: 9411
 
 service:
   type: ClusterIP
@@ -39,6 +41,10 @@ service:
   - name: http-jaeger
     port: 14268
     targetPort: 14268
+    protocol: TCP
+  - name: http-zipkin
+    port: 9411
+    targetPort: 9411
     protocol: TCP
 
 livenessProbe:
