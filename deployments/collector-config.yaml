@@ -97,41 +97,47 @@ global:
       prefixes:
         - http.request.header.
         - http.response.header.
+        - rpc.request.metadata.
+        - rpc.response.metadata.
       complex-data:
-        - key: http.request.body
-          type-key: http.request.header.content-type
+        - key: http.response.header.set-cookie
+          type: cookie
+        - key: http.request.header.cookie
+          type: cookie
         - key: http.response.body
           type-key: http.response.header.content-type
+        - key: http.request.body
+          type-key: http.request.header.content-type
+        - key: rpc.response.body
+          type: json
+        - key: rpc.request.body
+          type: json
         - key: sql.query
           type: sql
         - key: http.url
           type: urlencoded
-        - key: http.request.header.cookie
-          type: cookie
-        - key: http.response.header.set-cookie
-          type: cookie
       key-regexs:
-        - regex: ^authorization$
+        - regex: ^authorization(\[\d+\])?$
           category: auth
           redaction-strategy: hash
           session-identifier: true
-        - regex: ^remember_token$
+        - regex: ^remember_token(\[\d+\])?$
           category: auth
           redaction-strategy: hash
           session-identifier: true
-        - regex: ^session$
+        - regex: ^session(\[\d+\])?$
           category: auth
           redaction-strategy: hash
           session-identifier: true
-        - regex: ^access_token$
+        - regex: ^access_token(\[\d+\])?$
           category: auth
-        - regex: ^api_key$
+        - regex: ^api_key(\[\d+\])?$
           category: auth
-        - regex: ^apikey$
+        - regex: ^apikey(\[\d+\])?$
           category: auth
-        - regex: ^password$
+        - regex: ^password(\[\d+\])?$
           category: auth
-        - regex: ^passwd$
+        - regex: ^passwd(\[\d+\])?$
           category: auth
-        - regex: ^secret$
+        - regex: ^secret(\[\d+\])?$
           category: auth
