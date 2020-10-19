@@ -89,7 +89,19 @@ global:
       #   conditions:
       #     - key: http.url
       #       regex: \/login
-    pii-filter:
+      ######################################################
+      ### This example will extract enduser id from a header
+      # - key: http.request.header.x-user
+      #   type: id
+      ######################################################
+      ### This example will extract enduser role from a header
+      # - key: http.request.header.x-role
+      #   type: role
+      ######################################################
+      ### This example will extract enduser scope from a header
+      # - key: http.request.header.x-scope
+      #   type: scope
+      pii-filter:
       redaction-strategy: redact
       modsec-config:
         config-dir: "/"

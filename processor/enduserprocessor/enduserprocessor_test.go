@@ -135,6 +135,62 @@ func Test_enduser_authHeader_basic(t *testing.T) {
 	assert.Equal(t, "", user.session)
 }
 
+func Test_enduser_id(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-user",
+		Type: "id",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.idCapture(endusers[0], "dave")
+	assert.NotNil(t, user)
+	assert.Equal(t, "dave", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, "", user.session)
+}
+
+func Test_enduser_role(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-role",
+		Type: "role",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.roleCapture(endusers[0], "user")
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "user", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, "", user.session)
+}
+
+func Test_enduser_scope(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-scope",
+		Type: "scope",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.scopeCapture(endusers[0], "traceable")
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, "", user.session)
+}
 func Test_enduser_json(t *testing.T) {
 	endusers := []Enduser{{
 		Key:          "http.response.body",

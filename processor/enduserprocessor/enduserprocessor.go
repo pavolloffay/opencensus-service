@@ -127,6 +127,12 @@ func (processor *enduserprocessor) capture(span *tracepb.Span, enduser Enduser, 
 
 	var user *user
 	switch enduser.Type {
+	case "id":
+		user = processor.idCapture(enduser, value)
+	case "role":
+		user = processor.roleCapture(enduser, value)
+	case "scope":
+		user = processor.scopeCapture(enduser, value)
 	case "authheader":
 		user = processor.authHeaderCapture(enduser, value)
 	case "json":
@@ -202,6 +208,18 @@ func addSpanAttribute(span *tracepb.Span, key string, value string) {
 	pbAttrib.Value = &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: value}}
 
 	attribMap[key] = pbAttrib
+}
+
+func (processor *enduserprocessor) idCapture(enduser Enduser, value string) *user {
+	return &user{id: value}
+}
+
+func (processor *enduserprocessor) roleCapture(enduser Enduser, value string) *user {
+	return &user{role: value}
+}
+
+func (processor *enduserprocessor) scopeCapture(enduser Enduser, value string) *user {
+	return &user{scope: value}
 }
 
 func (processor *enduserprocessor) authHeaderCapture(enduser Enduser, value string) *user {
