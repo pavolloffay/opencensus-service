@@ -253,24 +253,30 @@ func (processor *enduserprocessor) decodeJwt(enduser Enduser, tokenString string
 
 	user := new(user)
 	for _, claim := range enduser.IDClaims {
-		if id, ok := claims[claim]; ok {
-			user.id = processor.jsonToString(id)
+		if value, ok := claims[claim]; ok {
+			if !processor.getUserIDFromPath(enduser, user, value) {
+				user.id = processor.jsonToString(value)
+			}
 			break
 		}
 	}
 	for _, claim := range enduser.RoleClaims {
-		if role, ok := claims[claim]; ok {
-			user.role = processor.jsonToString(role)
+		if value, ok := claims[claim]; ok {
+			if !processor.getUserRoleFromPath(enduser, user, value) {
+				user.role = processor.jsonToString(value)
+			}
 			break
 		}
 	}
 	for _, claim := range enduser.ScopeClaims {
-		if scope, ok := claims[claim]; ok {
-			user.scope = processor.jsonToString(scope)
+		if value, ok := claims[claim]; ok {
+			if !processor.getUserScopeFromPath(enduser, user, value) {
+				user.scope = processor.jsonToString(value)
+			}
 			break
 		}
 	}
-	for _, claim := range enduser.SessionClaims {
+	for _, claim := range enduser.SessionClaims { //FIXME: session key stuff
 		if session, ok := claims[claim]; ok {
 			user.session = processor.jsonToString(session)
 			if !enduser.RawSessionValue {
@@ -300,6 +306,27 @@ func (processor *enduserprocessor) jsonToString(value interface{}) string {
 }
 
 func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *user {
+	v := processor.getJSON(value)
+
+	user := new(user)
+	processor.getUserIDFromPath(enduser, user, v)
+	processor.getUserRoleFromPath(enduser, user, v)
+	processor.getUserScopeFromPath(enduser, user, v)
+
+	for _, path := range enduser.SessionPaths {
+		session, err := jsonpath.Get(path, v)
+		if err == nil {
+			user.session = processor.jsonToString(session) //FIXME: session key stuff
+			if !enduser.RawSessionValue {
+				user.session = piifilterprocessor.HashValue(user.session)
+			}
+			break
+		}
+	}
+	return user
+}
+
+func (processor *enduserprocessor) getJSON(value string) interface{} {
 	var v interface{}
 	err := jsoniter.Config{
 		EscapeHTML:              false,
@@ -312,39 +339,49 @@ func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *u
 		processor.logger.Debug("Could not parse json to capture user", zap.Error(err))
 	}
 
-	user := new(user)
+	return v
+}
+
+func (processor *enduserprocessor) getUserIDFromPath(enduser Enduser, user *user, value interface{}) bool {
 	for _, path := range enduser.IDPaths {
-		id, err := jsonpath.Get(path, v)
-		if err == nil {
-			user.id = processor.jsonToString(id)
-			break
+		if value, ok := processor.getJSONElement(path, value); ok {
+			user.id = value
+			return true
 		}
 	}
+
+	return false
+}
+
+func (processor *enduserprocessor) getUserRoleFromPath(enduser Enduser, user *user, value interface{}) bool {
 	for _, path := range enduser.RolePaths {
-		role, err := jsonpath.Get(path, v)
-		if err == nil {
-			user.role = processor.jsonToString(role)
-			break
+		if value, ok := processor.getJSONElement(path, value); ok {
+			user.role = value
+			return true
 		}
 	}
+
+	return false
+}
+
+func (processor *enduserprocessor) getUserScopeFromPath(enduser Enduser, user *user, value interface{}) bool {
 	for _, path := range enduser.ScopePaths {
-		scope, err := jsonpath.Get(path, v)
-		if err == nil {
-			user.scope = processor.jsonToString(scope)
-			break
+		if value, ok := processor.getJSONElement(path, value); ok {
+			user.scope = value
+			return true
 		}
 	}
-	for _, path := range enduser.SessionPaths {
-		session, err := jsonpath.Get(path, v)
-		if err == nil {
-			user.session = processor.jsonToString(session)
-			if !enduser.RawSessionValue {
-				user.session = piifilterprocessor.HashValue(user.session)
-			}
-			break
-		}
+
+	return false
+}
+
+func (processor *enduserprocessor) getJSONElement(path string, json interface{}) (string, bool) {
+	elem, err := jsonpath.Get(path, json)
+	if err == nil {
+		return processor.jsonToString(elem), true
 	}
-	return user
+
+	return "", false
 }
 
 func (processor *enduserprocessor) urlencodedCapture(enduser Enduser, value string) *user {

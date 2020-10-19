@@ -3,6 +3,7 @@ package enduserprocessor
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"testing"
 
@@ -21,7 +22,7 @@ var (
 )
 
 func Test_enduser_authHeader_bearer(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.request.header.authorization",
 		Type:        "authheader",
 		Encoding:    "jwt",
@@ -52,7 +53,7 @@ func Test_enduser_authHeader_bearer(t *testing.T) {
 }
 
 func Test_enduser_authHeader_complexClaim(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:        "http.request.header.authorization",
 		Type:       "authheader",
 		Encoding:   "jwt",
@@ -77,8 +78,43 @@ func Test_enduser_authHeader_complexClaim(t *testing.T) {
 	assert.Equal(t, `{"role":{"a":["b","c"]}}`, user.role)
 }
 
+func Test_enduser_authHeader_complexClaimPath(t *testing.T) {
+	endusers := []Enduser{{
+		Key:         "http.request.header.authorization",
+		Type:        "authheader",
+		Encoding:    "jwt",
+		IDClaims:    []string{"data"},
+		IDPaths:     []string{"$.uuid"},
+		RoleClaims:  []string{"data"},
+		RolePaths:   []string{"$.role"},
+		ScopeClaims: []string{"data"},
+		ScopePaths:  []string{"$.scope"},
+	}}
+
+	var complexID interface{}
+	err := json.Unmarshal([]byte(`{"uuid": "abc123", "role": "user", "scope": "traceable"}`), &complexID)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"data": complexID,
+	})
+
+	tokenString, err := token.SignedString(hmacSecret)
+	fmt.Println(tokenString)
+	assert.Nil(t, err)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.authHeaderCapture(endusers[0], "Bearer "+tokenString)
+	assert.NotNil(t, user)
+	assert.Equal(t, "abc123", user.id)
+	assert.Equal(t, "user", user.role)
+	assert.Equal(t, "traceable", user.scope)
+}
+
 func Test_enduser_authHeader_basic(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:  "http.request.header.authorization",
 		Type: "authheader",
 	}}
@@ -100,7 +136,7 @@ func Test_enduser_authHeader_basic(t *testing.T) {
 }
 
 func Test_enduser_json(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -133,7 +169,7 @@ func Test_enduser_json(t *testing.T) {
 }
 
 func Test_enduser_complexJson(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -165,7 +201,7 @@ func Test_enduser_complexJson(t *testing.T) {
 }
 
 func Test_enduser_truncatedJson(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -197,7 +233,7 @@ func Test_enduser_truncatedJson(t *testing.T) {
 }
 
 func Test_enduser_urlencoded(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.response.body",
 		Type:        "urlencoded",
 		IDKeys:      []string{"name"},
@@ -226,7 +262,7 @@ func Test_enduser_urlencoded(t *testing.T) {
 }
 
 func Test_enduser_cookie(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.response.header.set-cookie",
 		Type:        "cookie",
 		IDKeys:      []string{"name"},
@@ -251,7 +287,7 @@ func Test_enduser_cookie(t *testing.T) {
 }
 
 func Test_enduser_cookieJwt(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.request.header.cookie",
 		Type:        "cookie",
 		CookieName:  "token",
@@ -283,10 +319,10 @@ func Test_enduser_cookieJwt(t *testing.T) {
 }
 
 func Test_enduser_condition(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:  "http.response.body",
 		Type: "json",
-		Conditions: []Condition{Condition{
+		Conditions: []Condition{{
 			Key:   "http.url",
 			Regex: "login",
 		}},
