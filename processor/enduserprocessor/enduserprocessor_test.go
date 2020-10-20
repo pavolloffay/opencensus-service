@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -80,19 +81,21 @@ func Test_enduser_authHeader_complexClaim(t *testing.T) {
 
 func Test_enduser_authHeader_complexClaimPath(t *testing.T) {
 	endusers := []Enduser{{
-		Key:         "http.request.header.authorization",
-		Type:        "authheader",
-		Encoding:    "jwt",
-		IDClaims:    []string{"data"},
-		IDPaths:     []string{"$.uuid"},
-		RoleClaims:  []string{"data"},
-		RolePaths:   []string{"$.role"},
-		ScopeClaims: []string{"data"},
-		ScopePaths:  []string{"$.scope"},
+		Key:           "http.request.header.authorization",
+		Type:          "authheader",
+		Encoding:      "jwt",
+		IDClaims:      []string{"data"},
+		IDPaths:       []string{"$.uuid"},
+		RoleClaims:    []string{"data"},
+		RolePaths:     []string{"$.role"},
+		ScopeClaims:   []string{"data"},
+		ScopePaths:    []string{"$.scope"},
+		SessionClaims: []string{"data"},
+		SessionPaths:  []string{"$.token"},
 	}}
 
 	var complexID interface{}
-	err := json.Unmarshal([]byte(`{"uuid": "abc123", "role": "user", "scope": "traceable"}`), &complexID)
+	err := json.Unmarshal([]byte(`{"uuid": "dave", "role": "user", "scope": "traceable", "token": "abc"}`), &complexID)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"data": complexID,
 	})
@@ -108,9 +111,10 @@ func Test_enduser_authHeader_complexClaimPath(t *testing.T) {
 
 	user := ep.authHeaderCapture(endusers[0], "Bearer "+tokenString)
 	assert.NotNil(t, user)
-	assert.Equal(t, "abc123", user.id)
+	assert.Equal(t, "dave", user.id)
 	assert.Equal(t, "user", user.role)
 	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, piifilterprocessor.HashValue("abc"), user.session)
 }
 
 func Test_enduser_authHeader_basic(t *testing.T) {
@@ -438,4 +442,36 @@ func Test_enduser_condition(t *testing.T) {
 
 	assert.Equal(t, "match_name", spanMatch.GetAttributes().AttributeMap["enduser.id"].GetStringValue().Value)
 	assert.Nil(t, spanNoMatch.GetAttributes().AttributeMap["enduser.id"])
+}
+
+func Test_enduser_authHeader_sessionIndexes(t *testing.T) {
+	endusers := []Enduser{{
+		Key:              "http.request.header.authorization",
+		Type:             "authheader",
+		Encoding:         "jwt",
+		SessionSeparator: ".",
+		SessionIndexes:   []int{0, 2},
+	}}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   "dave",
+		"role":  "user",
+		"scope": "traceable",
+	})
+	tokenString, err := token.SignedString(hmacSecret)
+	tokenParts := strings.Split(tokenString, ".")
+	assert.Nil(t, err)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := user{}
+	ep.setSession(endusers[0], &user, tokenString)
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, piifilterprocessor.HashValue(tokenParts[0]+"."+tokenParts[2]), user.session)
 }

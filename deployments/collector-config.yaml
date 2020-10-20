@@ -26,7 +26,7 @@ queued-exporters:
 
     jaeger-thrift-http:
       collector-endpoint: "https://api.aws.traceable.ai:14268/api/traces"
-      timeout: 5s
+      timeout: 10s
       iam-endpoint: "api.traceable.ai:443"
 global:
   attributes:
@@ -62,6 +62,43 @@ global:
       #   # claims containing the enduser scope
       #   scope_claims:
       #     - scope
+      ######################################################
+      ### This example will extract enduser information from
+      ### a JWT sent as an autorization header where the
+      ### claim is the composite value below and only the
+      ### first two parts of the jwt should be used for
+      ### session identifcation
+      # {
+      #   "data": {
+      #     "id": "",
+      #     "role": "",
+      #     "scope": "",
+      #   }
+      # }
+      # - key: http.request.header.authorization
+      #   # authheader type can be either bearer or basic
+      #   type: authheader
+      #   encoding: jwt
+      #   session_indexes: [0,1]
+      #   session_separator: .
+      #   # claims containing the enduser id
+      #   id_claims:
+      #     - data
+      #   # json path within the claim containing the id
+      #   id_paths:
+      #     - $.id
+      #   # claims containing the enduser role
+      #   role_claims:
+      #     - data
+      #   # json path within the claim containing the role
+      #   role_paths:
+      #     - $.role
+      #   # claims containing the enduser scope
+      #   scope_claims:
+      #     - data
+      #   # json path within the claim containing the scope
+      #   scope_paths:
+      #     - $.scope
       ######################################################
       ### This example will extract enduser information from
       ### the json response (below) of a login endpoint.
@@ -133,6 +170,10 @@ global:
           category: auth
           redaction-strategy: hash
           session-identifier: true
+          # the configuration below will use only the first
+          # two parts of the jwt for session identification
+          # session-indexes: [0,1]
+          # session-separator: "."
         - regex: ^remember_token(\[\d+\])?$
           category: auth
           redaction-strategy: hash

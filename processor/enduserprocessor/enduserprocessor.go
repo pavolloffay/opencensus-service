@@ -40,24 +40,26 @@ type Condition struct {
 // Enduser is the configuration defining where to
 // extract enduser data
 type Enduser struct {
-	Key             string      `mapstructure:"key"`
-	Type            string      `mapstructure:"type"`
-	Encoding        string      `mapstructure:"encoding"`
-	CookieName      string      `mapstructure:"cookie_name"`
-	RawSessionValue bool        `mapstructure:"raw_session_value"`
-	Conditions      []Condition `mapstructure:"conditions"`
-	IDClaims        []string    `mapstructure:"id_claims"`
-	IDPaths         []string    `mapstructure:"id_paths"`
-	IDKeys          []string    `mapstructure:"id_keys"`
-	RoleClaims      []string    `mapstructure:"role_claims"`
-	RolePaths       []string    `mapstructure:"role_paths"`
-	RoleKeys        []string    `mapstructure:"role_keys"`
-	ScopeClaims     []string    `mapstructure:"scope_claims"`
-	ScopePaths      []string    `mapstructure:"scope_paths"`
-	ScopeKeys       []string    `mapstructure:"scope_keys"`
-	SessionClaims   []string    `mapstructure:"session_claims"`
-	SessionPaths    []string    `mapstructure:"session_paths"`
-	SessionKeys     []string    `mapstructure:"session_keys"`
+	Key              string      `mapstructure:"key"`
+	Type             string      `mapstructure:"type"`
+	Encoding         string      `mapstructure:"encoding"`
+	CookieName       string      `mapstructure:"cookie_name"`
+	RawSessionValue  bool        `mapstructure:"raw_session_value"`
+	Conditions       []Condition `mapstructure:"conditions"`
+	IDClaims         []string    `mapstructure:"id_claims"`
+	IDPaths          []string    `mapstructure:"id_paths"`
+	IDKeys           []string    `mapstructure:"id_keys"`
+	RoleClaims       []string    `mapstructure:"role_claims"`
+	RolePaths        []string    `mapstructure:"role_paths"`
+	RoleKeys         []string    `mapstructure:"role_keys"`
+	ScopeClaims      []string    `mapstructure:"scope_claims"`
+	ScopePaths       []string    `mapstructure:"scope_paths"`
+	ScopeKeys        []string    `mapstructure:"scope_keys"`
+	SessionClaims    []string    `mapstructure:"session_claims"`
+	SessionPaths     []string    `mapstructure:"session_paths"`
+	SessionKeys      []string    `mapstructure:"session_keys"`
+	SessionIndexes   []int       `mapstructure:"session_indexes"`
+	SessionSeparator string      `mapstructure:"session_separator"`
 }
 
 type enduserprocessor struct {
@@ -222,6 +224,22 @@ func (processor *enduserprocessor) scopeCapture(enduser Enduser, value string) *
 	return &user{scope: value}
 }
 
+func (processor *enduserprocessor) setSession(enduser Enduser, user *user, value string) {
+	// don't override an existing session value
+	if len(user.session) > 0 {
+		return
+	}
+
+	user.session = value
+	if len(enduser.SessionSeparator) > 0 {
+		user.session = piifilterprocessor.FormatSessionIdentifier(processor.logger, enduser.SessionSeparator, enduser.SessionIndexes, value)
+	}
+
+	if !enduser.RawSessionValue {
+		user.session = piifilterprocessor.HashValue(user.session)
+	}
+}
+
 func (processor *enduserprocessor) authHeaderCapture(enduser Enduser, value string) *user {
 	lcValue := strings.ToLower(value)
 	if strings.HasPrefix(lcValue, "bearer ") {
@@ -230,9 +248,8 @@ func (processor *enduserprocessor) authHeaderCapture(enduser Enduser, value stri
 		switch enduser.Encoding {
 		case "jwt":
 			user = processor.decodeJwt(enduser, tokenString)
-			if len(user.session) == 0 {
-				user.session = piifilterprocessor.HashValue(tokenString)
-			}
+			// by default use the jwt token as the session id
+			processor.setSession(enduser, user, tokenString)
 		default:
 			processor.logger.Info("Unknown auth header encoding", zap.String("value", enduser.Encoding))
 			return nil
@@ -265,8 +282,8 @@ func (processor *enduserprocessor) decodeJwt(enduser Enduser, tokenString string
 	claims := jwt.MapClaims{}
 	_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claims)
 	if err != nil {
-		processor.logger.Info("Couldn't parse jwt", zap.Error(err))
-		return nil
+		processor.logger.Debug("Couldn't parse jwt", zap.Error(err))
+		return new(user)
 	}
 
 	user := new(user)
@@ -294,11 +311,10 @@ func (processor *enduserprocessor) decodeJwt(enduser Enduser, tokenString string
 			break
 		}
 	}
-	for _, claim := range enduser.SessionClaims { //FIXME: session key stuff
-		if session, ok := claims[claim]; ok {
-			user.session = processor.jsonToString(session)
-			if !enduser.RawSessionValue {
-				user.session = piifilterprocessor.HashValue(user.session)
+	for _, claim := range enduser.SessionClaims {
+		if value, ok := claims[claim]; ok {
+			if !processor.getUserSessionFromPath(enduser, user, value) {
+				processor.setSession(enduser, user, processor.jsonToString(value))
 			}
 			break
 		}
@@ -330,17 +346,7 @@ func (processor *enduserprocessor) jsonCapture(enduser Enduser, value string) *u
 	processor.getUserIDFromPath(enduser, user, v)
 	processor.getUserRoleFromPath(enduser, user, v)
 	processor.getUserScopeFromPath(enduser, user, v)
-
-	for _, path := range enduser.SessionPaths {
-		session, err := jsonpath.Get(path, v)
-		if err == nil {
-			user.session = processor.jsonToString(session) //FIXME: session key stuff
-			if !enduser.RawSessionValue {
-				user.session = piifilterprocessor.HashValue(user.session)
-			}
-			break
-		}
-	}
+	processor.getUserSessionFromPath(enduser, user, v)
 	return user
 }
 
@@ -386,6 +392,17 @@ func (processor *enduserprocessor) getUserScopeFromPath(enduser Enduser, user *u
 	for _, path := range enduser.ScopePaths {
 		if value, ok := processor.getJSONElement(path, value); ok {
 			user.scope = value
+			return true
+		}
+	}
+
+	return false
+}
+
+func (processor *enduserprocessor) getUserSessionFromPath(enduser Enduser, user *user, value interface{}) bool {
+	for _, path := range enduser.SessionPaths {
+		if value, ok := processor.getJSONElement(path, value); ok {
+			processor.setSession(enduser, user, value)
 			return true
 		}
 	}
@@ -450,14 +467,11 @@ func (processor *enduserprocessor) urlencodedCapture(enduser Enduser, value stri
 		if values, ok := params[key]; ok {
 			for _, value := range values {
 				if len(value) > 0 {
-					user.session = value
-					if !enduser.RawSessionValue {
-						user.session = piifilterprocessor.HashValue(user.session)
-					}
+					processor.setSession(enduser, user, value)
 				}
 			}
 		}
-		if len(user.scope) > 0 {
+		if len(user.session) > 0 {
 			break
 		}
 	}
@@ -482,9 +496,7 @@ func (processor *enduserprocessor) cookieCapture(enduser Enduser, value string) 
 							return nil
 						}
 						// use the jwt cookie as the session string
-						if len(user.session) == 0 {
-							user.session = piifilterprocessor.HashValue(cookie.Value)
-						}
+						processor.setSession(enduser, user, cookie.Value)
 						return user
 					}
 				}
@@ -535,14 +547,11 @@ func (processor *enduserprocessor) cookieCapture(enduser Enduser, value string) 
 	for _, key := range enduser.SessionKeys {
 		for _, cookie := range cookies {
 			if cookie.Name == key {
-				user.session = cookie.Value
-				if !enduser.RawSessionValue {
-					user.session = piifilterprocessor.HashValue(user.session)
-				}
+				processor.setSession(enduser, user, cookie.Value)
 				break
 			}
 		}
-		if len(user.scope) > 0 {
+		if len(user.session) > 0 {
 			break
 		}
 	}

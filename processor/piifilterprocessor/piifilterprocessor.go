@@ -42,8 +42,10 @@ type PiiElement struct {
 	Category          string `mapstructure:"category"`
 	RedactStrategy    string `mapstructure:"redaction-strategy"`
 	Redact            RedactionStrategy
-	Fqn               *bool `mapstructure:"fqn,omitempty"`
-	SessionIdentifier bool  `mapstructure:"session-identifier"`
+	Fqn               *bool  `mapstructure:"fqn,omitempty"`
+	SessionIdentifier bool   `mapstructure:"session-identifier"`
+	SessionIndexes    []int  `mapstructure:"session-indexes"`
+	SessionSeparator  string `mapstructure:"session-separator"`
 }
 
 // ComplexData identifes the attribute names which define
@@ -307,9 +309,9 @@ func (pfp *piifilterprocessor) filterMatchedKey(piiElem *PiiElement, keyToMatch 
 		// be tracked in more places than just an auth header.
 		if actualKey == "http.request.header.authorization" &&
 			strings.HasPrefix(strings.ToLower(value), "bearer ") {
-			filterData.SessionID = HashValue(value[7:])
+			pfp.setSessionID(piiElem, filterData, value[7:])
 		} else {
-			filterData.SessionID = redacted
+			pfp.setSessionID(piiElem, filterData, value)
 		}
 	}
 
@@ -343,10 +345,11 @@ func (pfp *piifilterprocessor) filterStringValueRegexs(value string, key string,
 
 	filtered := false
 	for regexp, piiElem := range pfp.valueRegexs {
+		var origValue = value
 		filtered, value = pfp.replacingRegex(value, inspectorKey, regexp, piiElem, filterData)
 
 		if piiElem.SessionIdentifier {
-			filterData.SessionID = value
+			pfp.setSessionID(&piiElem, filterData, origValue)
 		}
 
 		if filtered {
@@ -530,6 +533,38 @@ func UnindexedKey(key string) string {
 	return strings.Split(key, "[")[0]
 }
 
+func FormatSessionIdentifier(logger *zap.Logger, separator string, indexes []int, value string) string {
+	parts := strings.Split(value, separator)
+	var session string
+	for i, index := range indexes {
+		if index >= len(parts) {
+			logger.Debug("Session index greater than number parts", zap.Int("index", index), zap.Int("parts", len(parts)))
+			break
+		}
+		if i > 0 {
+			session += separator
+		}
+		session += parts[index]
+	}
+	return session
+}
+
+func (pfp *piifilterprocessor) setSessionID(piiElem *PiiElement, filterData *FilterData, value string) {
+	// don't override an existing session value
+	if len(filterData.SessionID) > 0 {
+		return
+	}
+
+	filterData.SessionID = value
+	if len(piiElem.SessionSeparator) > 0 {
+		filterData.SessionID = FormatSessionIdentifier(pfp.logger, piiElem.SessionSeparator, piiElem.SessionIndexes, value)
+	}
+
+	if piiElem.Redact != Raw {
+		filterData.SessionID = HashValue(filterData.SessionID)
+	}
+}
+
 // In case if we want to have PiiElement specific redaction configguration, we can pass the bool here from piiElement instead of depending on global value
 func (pfp *piifilterprocessor) redactString(value string) (bool, string) {
 	switch pfp.redact {
@@ -562,7 +597,7 @@ func (pfp *piifilterprocessor) getTruncatedKey(key string) string {
 func (pfp *piifilterprocessor) getDataType(dataType string) string {
 	mt, _, err := mime.ParseMediaType(dataType)
 	if err != nil {
-		pfp.logger.Info("Could not parse media type", zap.Error(err), zap.String("dataType", dataType))
+		pfp.logger.Debug("Could not parse media type", zap.Error(err), zap.String("dataType", dataType))
 		return ""
 	}
 
