@@ -3,7 +3,9 @@ package enduserprocessor
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -21,7 +23,7 @@ var (
 )
 
 func Test_enduser_authHeader_bearer(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.request.header.authorization",
 		Type:        "authheader",
 		Encoding:    "jwt",
@@ -52,7 +54,7 @@ func Test_enduser_authHeader_bearer(t *testing.T) {
 }
 
 func Test_enduser_authHeader_complexClaim(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:        "http.request.header.authorization",
 		Type:       "authheader",
 		Encoding:   "jwt",
@@ -77,8 +79,46 @@ func Test_enduser_authHeader_complexClaim(t *testing.T) {
 	assert.Equal(t, `{"role":{"a":["b","c"]}}`, user.role)
 }
 
+func Test_enduser_authHeader_complexClaimPath(t *testing.T) {
+	endusers := []Enduser{{
+		Key:           "http.request.header.authorization",
+		Type:          "authheader",
+		Encoding:      "jwt",
+		IDClaims:      []string{"data"},
+		IDPaths:       []string{"$.uuid"},
+		RoleClaims:    []string{"data"},
+		RolePaths:     []string{"$.role"},
+		ScopeClaims:   []string{"data"},
+		ScopePaths:    []string{"$.scope"},
+		SessionClaims: []string{"data"},
+		SessionPaths:  []string{"$.token"},
+	}}
+
+	var complexID interface{}
+	err := json.Unmarshal([]byte(`{"uuid": "dave", "role": "user", "scope": "traceable", "token": "abc"}`), &complexID)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"data": complexID,
+	})
+
+	tokenString, err := token.SignedString(hmacSecret)
+	fmt.Println(tokenString)
+	assert.Nil(t, err)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.authHeaderCapture(endusers[0], "Bearer "+tokenString)
+	assert.NotNil(t, user)
+	assert.Equal(t, "dave", user.id)
+	assert.Equal(t, "user", user.role)
+	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, piifilterprocessor.HashValue("abc"), user.session)
+}
+
 func Test_enduser_authHeader_basic(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:  "http.request.header.authorization",
 		Type: "authheader",
 	}}
@@ -99,8 +139,64 @@ func Test_enduser_authHeader_basic(t *testing.T) {
 	assert.Equal(t, "", user.session)
 }
 
+func Test_enduser_id(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-user",
+		Type: "id",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.idCapture(endusers[0], "dave")
+	assert.NotNil(t, user)
+	assert.Equal(t, "dave", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, "", user.session)
+}
+
+func Test_enduser_role(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-role",
+		Type: "role",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.roleCapture(endusers[0], "user")
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "user", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, "", user.session)
+}
+
+func Test_enduser_scope(t *testing.T) {
+	endusers := []Enduser{{
+		Key:  "http.request.header.x-scope",
+		Type: "scope",
+	}}
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := ep.scopeCapture(endusers[0], "traceable")
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "traceable", user.scope)
+	assert.Equal(t, "", user.session)
+}
 func Test_enduser_json(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -133,7 +229,7 @@ func Test_enduser_json(t *testing.T) {
 }
 
 func Test_enduser_complexJson(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -165,7 +261,7 @@ func Test_enduser_complexJson(t *testing.T) {
 }
 
 func Test_enduser_truncatedJson(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:          "http.response.body",
 		Type:         "json",
 		IDPaths:      []string{"$.userInfo.name"},
@@ -197,7 +293,7 @@ func Test_enduser_truncatedJson(t *testing.T) {
 }
 
 func Test_enduser_urlencoded(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.response.body",
 		Type:        "urlencoded",
 		IDKeys:      []string{"name"},
@@ -226,7 +322,7 @@ func Test_enduser_urlencoded(t *testing.T) {
 }
 
 func Test_enduser_cookie(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.response.header.set-cookie",
 		Type:        "cookie",
 		IDKeys:      []string{"name"},
@@ -251,7 +347,7 @@ func Test_enduser_cookie(t *testing.T) {
 }
 
 func Test_enduser_cookieJwt(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:         "http.request.header.cookie",
 		Type:        "cookie",
 		CookieName:  "token",
@@ -283,10 +379,10 @@ func Test_enduser_cookieJwt(t *testing.T) {
 }
 
 func Test_enduser_condition(t *testing.T) {
-	endusers := []Enduser{Enduser{
+	endusers := []Enduser{{
 		Key:  "http.response.body",
 		Type: "json",
-		Conditions: []Condition{Condition{
+		Conditions: []Condition{{
 			Key:   "http.url",
 			Regex: "login",
 		}},
@@ -346,4 +442,36 @@ func Test_enduser_condition(t *testing.T) {
 
 	assert.Equal(t, "match_name", spanMatch.GetAttributes().AttributeMap["enduser.id"].GetStringValue().Value)
 	assert.Nil(t, spanNoMatch.GetAttributes().AttributeMap["enduser.id"])
+}
+
+func Test_enduser_authHeader_sessionIndexes(t *testing.T) {
+	endusers := []Enduser{{
+		Key:              "http.request.header.authorization",
+		Type:             "authheader",
+		Encoding:         "jwt",
+		SessionSeparator: ".",
+		SessionIndexes:   []int{0, 2},
+	}}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   "dave",
+		"role":  "user",
+		"scope": "traceable",
+	})
+	tokenString, err := token.SignedString(hmacSecret)
+	tokenParts := strings.Split(tokenString, ".")
+	assert.Nil(t, err)
+
+	logger := zap.New(zapcore.NewNopCore())
+	processor, err := NewTraceProcessor(&exportertest.SinkTraceExporter{}, endusers, logger)
+	var ep = processor.(*enduserprocessor)
+	assert.Nil(t, err)
+
+	user := user{}
+	ep.setSession(endusers[0], &user, tokenString)
+	assert.NotNil(t, user)
+	assert.Equal(t, "", user.id)
+	assert.Equal(t, "", user.role)
+	assert.Equal(t, "", user.scope)
+	assert.Equal(t, piifilterprocessor.HashValue(tokenParts[0]+"."+tokenParts[2]), user.session)
 }
