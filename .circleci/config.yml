@@ -10,7 +10,7 @@ executors:
       - image: cimg/openjdk:11.0
   golang_docker:
     docker:
-      - image: circleci/golang:1.12
+      - image: cimg/go:1.15
   helm:
     docker:
     - image: $DOCKER_REGISTRY/ai.traceable.build/helm-packager:0.1.0
