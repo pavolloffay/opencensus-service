@@ -1,6 +1,6 @@
 module github.com/census-instrumentation/opencensus-service
 
-go 1.12
+go 1.15
 
 replace k8s.io/client-go v2.0.0-alpha.0.0.20181121191925-a47917edff34+incompatible => k8s.io/client-go v0.0.0-20181121191925-a47917edff34
 
