@@ -29,6 +29,9 @@ spec:
         prometheus.io/path: "/metrics"
         prometheus.io/port: "8888"
         prometheus.io/scrape: "true"
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         release: {{ .Release.Name }}
       {{- with .Values.podLabels }}
