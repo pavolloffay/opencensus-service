@@ -113,7 +113,7 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
       - package-charts:
           context: continuous_deployment
           requires:
@@ -121,4 +121,4 @@ workflows:
           filters:
             branches:
               only:
-              - master
+              - main
