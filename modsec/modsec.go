@@ -44,10 +44,11 @@ func (a *attrArr) free() {
 }
 
 type RuleMatch struct {
-	RuleId        string
-	RuleMessage   string
-	MatchMessage  string
-	ParanoiaLevel int
+	RuleId         string
+	RuleMessage    string
+	MatchMessage   string
+	MatchAttribute string
+	ParanoiaLevel  int
 }
 
 type ModsecLib interface {
@@ -120,10 +121,11 @@ func (ms *modsec) ProcessAttributes(attributeMap map[string]string) ([]RuleMatch
 	for i := 0; i < int(cMatches.count); i++ {
 		rulePtr := matchSlice[i]
 		ruleMatch := RuleMatch{
-			RuleId:        C.GoString(rulePtr.rule_id),
-			RuleMessage:   C.GoString(rulePtr.rule_message),
-			MatchMessage:  C.GoString(rulePtr.match_message),
-			ParanoiaLevel: int(rulePtr.paranoia_level),
+			RuleId:         C.GoString(rulePtr.rule_id),
+			RuleMessage:    C.GoString(rulePtr.rule_message),
+			MatchMessage:   C.GoString(rulePtr.match_message),
+			MatchAttribute: C.GoString(rulePtr.match_attribute),
+			ParanoiaLevel:  int(rulePtr.paranoia_level),
 		}
 		ruleMatches[i] = ruleMatch
 	}

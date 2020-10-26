@@ -65,6 +65,7 @@ func Test_ModsecInspector_multiValueKey(t *testing.T) {
 
 	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].Id == "100")
 	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].MatchMessage == "Matched ARGS:login_1: ***")
+	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].MatchAttribute == "http.request.body.login_1")
 }
 
 func Test_ModsecInspector_nilInSlice(t *testing.T) {
@@ -91,4 +92,5 @@ func Test_ModsecInspector_nilInSlice(t *testing.T) {
 
 	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].Id == "100")
 	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].MatchMessage == "Matched ARGS:login_1: ' or '1'='1")
+	assert.True(t, message.AnomalyInspection.ModSecAnomalies[0].MatchAttribute == "http.request.body.login_1")
 }
