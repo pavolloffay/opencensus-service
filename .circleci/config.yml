@@ -8,9 +8,15 @@ executors:
   gradle_docker:
     docker:
       - image: cimg/openjdk:11.0
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
   golang_docker:
     docker:
       - image: cimg/go:1.15
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_PASSWORD
   helm:
     docker:
     - image: $DOCKER_REGISTRY/ai.traceable.build/helm-packager:0.1.0
@@ -24,6 +30,12 @@ commands:
       - checkout
       - attach_workspace:
           at: *workspace_root
+  docker_login:
+    description: "Login to dockerhub with readonly credentials"
+    steps:
+      - run:
+          name: Dockerhub login
+          command: echo $DOCKERHUB_PASSWORD | docker login --username $DOCKERHUB_USERNAME --password-stdin
 
 jobs:
   download-binaries:
@@ -65,6 +77,7 @@ jobs:
             - "9b:ec:1d:cd:4d:46:f9:2d:b7:7a:80:6d:16:ca:e1:4d"
       - setup_build_environment
       - setup_remote_docker
+      - docker_login
       - run: ./gradlew :tag -Prelease
       - run: git push origin $(./gradlew -q :printVersion)
       - run: mkdir -p deployments/artifacts/ &&  cp -v /tmp/workspace/occollector_modsec_linux ./deployments/artifacts/
@@ -97,15 +110,21 @@ workflows:
   build-and-publish:
     jobs:
       - download-binaries:
-          context: ci-credentials
+          context:
+            - ci-credentials
+            - dockerhub-read
       - build:
-          context: ci-credentials
+          context:
+            - ci-credentials
+            - dockerhub-read
           requires:
             - download-binaries
       - validate-charts:
           context: continuous_deployment
       - publish:
-          context: ci-credentials
+          context:
+            - ci-credentials
+            - dockerhub-read
           requires:
             - download-binaries
             - build
