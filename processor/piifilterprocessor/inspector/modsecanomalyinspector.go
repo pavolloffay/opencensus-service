@@ -109,10 +109,11 @@ func (mi *modsecanomalyinspector) inspect(message *pb.HttpApiInspection, keyToVa
 		}
 
 		anomaly := &pb.ModSecAnomaly{
-			Id:            elem.RuleId,
-			MatchMessage:  elem.MatchMessage,
-			RuleMessage:   elem.RuleMessage,
-			ParanoiaLevel: int32(elem.ParanoiaLevel),
+			Id:             elem.RuleId,
+			MatchMessage:   elem.MatchMessage,
+			RuleMessage:    elem.RuleMessage,
+			ParanoiaLevel:  int32(elem.ParanoiaLevel),
+			MatchAttribute: elem.MatchAttribute,
 		}
 		modSecAnomalies = append(modSecAnomalies, anomaly)
 	}

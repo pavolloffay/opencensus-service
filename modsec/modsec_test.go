@@ -86,6 +86,7 @@ func Test_ModsecLib_ArgMatch(t *testing.T) {
 	assert.True(t, len(ret) == 1)
 
 	assert.True(t, ret[0].RuleId == "100")
+	assert.True(t, ret[0].MatchAttribute == "http.request.body.login")
 
 	testAttrs2 := make(map[string]string)
 	testAttrs2["http.request.body.10; drop table users --"] = "good value"
