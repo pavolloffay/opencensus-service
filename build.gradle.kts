@@ -13,7 +13,7 @@ plugins {
 var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").toString()
 
 val protobufVersion = "3.11.4"
-val apiInspectionApiVersion = "0.1.245"
+val apiInspectionApiVersion = "0.2.9"
 val apiInspectionApiProto: Configuration by configurations.creating
 val modsecurityCbindingsVersion = "0.1.42"
 val modsecurityCbindingFiles: Configuration by configurations.creating

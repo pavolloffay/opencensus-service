@@ -9,13 +9,17 @@ import (
 )
 
 const (
-	queryParamPrefix     = "http.request.query.param."
-	requestBodyPrefix    = "http.request.body."
-	requestHeaderPrefix  = "http.request.header."
-	requestCookiePrefix  = "http.request.cookie."
-	responseBodyPrefix   = "http.response.body."
-	responseHeaderPrefix = "http.response.header."
-	responseCookiePrefix = "http.response.cookie."
+	queryParamPrefix          = "http.request.query.param."
+	requestBodyPrefix         = "http.request.body."
+	requestHeaderPrefix       = "http.request.header."
+	requestCookiePrefix       = "http.request.cookie."
+	responseBodyPrefix        = "http.response.body."
+	responseHeaderPrefix      = "http.response.header."
+	responseCookiePrefix      = "http.response.cookie."
+	rpcRequestBodyPrefix      = "rpc.request.body."
+	rpcRequestMetadataPrefix  = "rpc.request.metadata."
+	rpcResponseBodyPrefix     = "rpc.response.body."
+	rpcResponseMetadataPrefix = "rpc.response.metadata."
 )
 
 type paramType int
@@ -29,6 +33,10 @@ const (
 	responseBody
 	responseHeader
 	responseCookie
+	rpcRequestBody
+	rpcRequestMetadata
+	rpcResponseBody
+	rpcResponseMetadata
 )
 
 // stripParamPrefix identifies the paramType based on the prefix and
@@ -58,6 +66,18 @@ func stripPrefix(key string) (string, paramType) {
 	case strings.HasPrefix(key, responseCookiePrefix):
 		prefix = responseCookiePrefix
 		prefixType = responseCookie
+	case strings.HasPrefix(key, rpcRequestBodyPrefix):
+		prefix = rpcRequestBodyPrefix
+		prefixType = rpcRequestBody
+	case strings.HasPrefix(key, rpcRequestMetadataPrefix):
+		prefix = rpcRequestMetadataPrefix
+		prefixType = rpcRequestMetadata
+	case strings.HasPrefix(key, rpcResponseBodyPrefix):
+		prefix = rpcResponseBodyPrefix
+		prefixType = rpcResponseBody
+	case strings.HasPrefix(key, rpcResponseMetadataPrefix):
+		prefix = rpcResponseMetadataPrefix
+		prefixType = rpcResponseMetadata
 	}
 	normalizedKey := strings.TrimPrefix(key, prefix)
 	return normalizedKey, prefixType
@@ -154,6 +174,26 @@ func addParamValueInspections(message *pb.HttpApiInspection, key string, inspect
 			message.ResponseCookieInspection = make(map[string]*pb.ParamValueInspections)
 		}
 		message.ResponseCookieInspection[normalizedKey] = inspections
+	case rpcRequestBody:
+		if message.RpcRequestBodyParamInspection == nil {
+			message.RpcRequestBodyParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		message.RpcRequestBodyParamInspection[normalizedKey] = inspections
+	case rpcRequestMetadata:
+		if message.RpcRequestMetadataParamInspection == nil {
+			message.RpcRequestMetadataParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		message.RpcRequestMetadataParamInspection[normalizedKey] = inspections
+	case rpcResponseBody:
+		if message.RpcResponseBodyParamInspection == nil {
+			message.RpcResponseBodyParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		message.RpcResponseBodyParamInspection[normalizedKey] = inspections
+	case rpcResponseMetadata:
+		if message.RpcResponseMetadataParamInspection == nil {
+			message.RpcResponseMetadataParamInspection = make(map[string]*pb.ParamValueInspections)
+		}
+		message.RpcResponseMetadataParamInspection[normalizedKey] = inspections
 	}
 }
 

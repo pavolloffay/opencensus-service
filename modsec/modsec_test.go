@@ -168,3 +168,47 @@ func Test_ModsecLib_ResStatusMatch(t *testing.T) {
 
 	lib.CleanupRuleEngine()
 }
+
+func Test_ModsecLib_RpcReqMetadataMatch(t *testing.T) {
+	lib := NewModsecLib()
+	lib.Init()
+	rule := `SecRule REQUEST_HEADERS:Host "attacker" "id:20"`
+	err := lib.NewRuleEngineByRules(rule)
+	assert.True(t, err == nil)
+
+	testAttrs := make(map[string]string)
+	testAttrs["rpc.request.metadata.Host"] = "attacker"
+
+	ret, err := lib.ProcessAttributes(testAttrs)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	assert.True(t, len(ret) == 1)
+
+	assert.True(t, ret[0].RuleId == "20")
+
+	lib.CleanupRuleEngine()
+}
+
+func Test_ModsecLib_RpcResMetadataMatch(t *testing.T) {
+	lib := NewModsecLib()
+	lib.Init()
+	rule := `SecRule RESPONSE_HEADERS:X-Cache "MISS" "id:55"`
+	err := lib.NewRuleEngineByRules(rule)
+	assert.True(t, err == nil)
+
+	testAttrs := make(map[string]string)
+	testAttrs["rpc.response.metadata.X-Cache"] = "MISS"
+
+	ret, err := lib.ProcessAttributes(testAttrs)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	assert.True(t, len(ret) == 1)
+
+	assert.True(t, ret[0].RuleId == "55")
+
+	lib.CleanupRuleEngine()
+}
