@@ -990,7 +990,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					return cmp.Equal(s1, s2)
 				}
 
-				if tt.name == "json_filter" || tt.name == "json_filter_dont_redact" || tt.name == "multiple_attributes" {
+				if tt.name == "json_filter" || tt.name == "json_filter_dont_redact" || tt.name == "multiple_attributes" || tt.name == "rpc_multiple_attributes" {
 					if strings.Contains(s2.Value, "==") {
 						return true
 					}
