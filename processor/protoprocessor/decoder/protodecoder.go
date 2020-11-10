@@ -47,7 +47,7 @@ func (pd *Protodecoder) Decode(b []byte) (interface{}, int) {
 			break
 		}
 		num, _, val, consumed := pd.decodeKeyVal(pending)
-		if consumed < 0 {
+		if consumed < 0 || val == nil {
 			return nil, consumed
 		}
 		// Update map for array

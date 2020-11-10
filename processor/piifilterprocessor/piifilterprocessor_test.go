@@ -66,6 +66,11 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 		"{\"key\":\"http.request.body\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
 		"{\"key\":\"http.request.body\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
 
+	multipleAttrsRpcExpectedDlpAttrValue := "[{\"key\":\"auth-key\",\"path\":\"\",\"type\":\"authinfo\"}," +
+		"{\"key\":\"rpc.request.body\",\"path\":\"$.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"rpc.request.body\",\"path\":\"$.b.password\",\"type\":\"sensitive\"}," +
+		"{\"key\":\"rpc.request.body\",\"path\":\"$.c[1].password\",\"type\":\"sensitive\"}]"
+
 	invalidJsonInput := []byte(`{
 	"key_or_value":{
 		a:"aaa",
@@ -733,10 +738,74 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
 									},
 									inspectorTag: {
-										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "EhsKCHBhc3N3b3JkEg8KDRoLCgcKAyoqKhACEAUSHQoKYi5wYXNzd29yZBIPCg0aCwoHCgMqKioQAhAFEh0KCmMucGFzc3dvcmQSDwoNGgsKBwoDKioqEAIQBQ=="}},
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "Ih4KDCQuYi5wYXNzd29yZBIOCgwSCgoCEAMQBRgJIgAiIQoPJC5jWzFdLnBhc3N3b3JkEg4KDBIKCgIQAxAFGAgiACIcCgokLnBhc3N3b3JkEg4KDBIKCgIQAxAFGAciAA=="}},
 									},
 									dlpTag: {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: multipleAttrsExpectedDlpAttrValue}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+
+		{
+			name: "rpc_multiple_attributes",
+			args: PiiFilter{
+				KeyRegExs: []PiiElement{
+					{
+						Regex:    "^password$",
+						Category: "sensitive",
+					},
+					{
+						Regex:    "^auth-key$",
+						Category: "authinfo",
+					},
+				},
+				ComplexData: []PiiComplexData{
+					{
+						Key:  "rpc.request.body",
+						Type: "json",
+					},
+				},
+			},
+			td: data.TraceData{
+				Spans: []*tracepb.Span{
+					{
+						Name: &tracepb.TruncatableString{Value: "test"},
+						Attributes: &tracepb.Span_Attributes{
+							AttributeMap: map[string]*tracepb.AttributeValue{
+								"rpc.request.body": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonInput)}},
+								},
+								"auth-key": {
+									Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "some-auth-key"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: []data.TraceData{
+				{
+					Spans: []*tracepb.Span{
+						{
+							Name: &tracepb.TruncatableString{Value: "test"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"rpc.request.body": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: string(jsonExpected)}},
+									},
+									"auth-key": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "***"}},
+									},
+									inspectorTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "YhwKCiQucGFzc3dvcmQSDgoMEgoKAhADEAUYByIAYh4KDCQuYi5wYXNzd29yZBIOCgwSCgoCEAMQBRgJIgBiIQoPJC5jWzFdLnBhc3N3b3JkEg4KDBIKCgIQAxAFGAgiAA=="}},
+									},
+									dlpTag: {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: multipleAttrsRpcExpectedDlpAttrValue}},
 									},
 								},
 							},
@@ -921,7 +990,7 @@ func Test_piifilterprocessor_ConsumeTraceData(t *testing.T) {
 					return cmp.Equal(s1, s2)
 				}
 
-				if tt.name == "json_filter" || tt.name == "json_filter_dont_redact" || tt.name == "multiple_attributes" {
+				if tt.name == "json_filter" || tt.name == "json_filter_dont_redact" || tt.name == "multiple_attributes" || tt.name == "rpc_multiple_attributes" {
 					if strings.Contains(s2.Value, "==") {
 						return true
 					}

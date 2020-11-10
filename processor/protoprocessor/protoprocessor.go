@@ -22,6 +22,7 @@ const (
 	rpcResponseBodyTag        = "rpc.response.body"
 	rpcRequestBodyEncodedTag  = rpcRequestBodyTag + ".base64"
 	rpcResponseBodyEncodedTag = rpcResponseBodyTag + ".base64"
+	rpcBodyDecodeRawTag       = "rpc.body.decode_raw"
 )
 
 // Protodecoder defines configuration for protoprocessor
@@ -95,6 +96,9 @@ func (processor *protoprocessor) ConsumeTraceData(ctx context.Context, td data.T
 		}
 		for key, decodedValue := range decodedAttributes {
 			processor.updateDecodedValue(span, key, decodedValue)
+		}
+		if len(decodedAttributes) > 0 {
+			processor.addAttribute(span, rpcBodyDecodeRawTag, "true")
 		}
 	}
 

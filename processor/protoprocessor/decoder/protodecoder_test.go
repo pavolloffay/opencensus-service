@@ -53,6 +53,13 @@ func Test_protodecoder_coverage(t *testing.T) {
 		`"5000":{"1":123456789,"12":1.6535997e-34,"123":6.0995758e-316,"1234":"hello",` +
 		`"12345":{"11":123456789,"1212":1.6535997e-34,"123123":6.0995758e-316,"12341234":"goodbye"}}}`
 
+	encodedOrder := "0a20386161633831326437353931366465373031373539313665626131313030326412034341441a" +
+		"2d0a0d313338353820527420333120571206416c62696f6e1a024e59220d556e697465642053746174657328cb702a19" +
+		"616c6c666f726f326e6530303740686f746d61696c2e636f6d321d0a13343032342d303037312d333234372d3734343810a60518f40f2006"
+	orderDecodedJson := `{"1":"8aac812d75916de70175916eba11002d","2":"CAD",` +
+		`"3":{"1":"13858 Rt 31 W","2":"Albion","3":"NY","4":"United States","5":14411},` +
+		`"5":"allforo2ne007@hotmail.com","6":{"1":"4024-0071-3247-7448","2":678,"3":2036,"4":6}}`
+
 	tests := []struct {
 		name          string
 		message       proto.Message
@@ -252,6 +259,11 @@ func Test_protodecoder_coverage(t *testing.T) {
 			name:       "check_group",
 			serialized: encodedGroup,
 			wantJson:   groupDecodedJson,
+		},
+		{
+			name:       "check_order",
+			serialized: encodedOrder,
+			wantJson:   orderDecodedJson,
 		},
 	}
 	logger := zap.New(zapcore.NewNopCore())

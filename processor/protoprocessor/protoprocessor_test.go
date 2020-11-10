@@ -72,6 +72,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 									"rpc.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
+									"rpc.body.decode_raw": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "true"}},
+									},
 								},
 							},
 						},
@@ -118,6 +121,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 									"rpc.response.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
+									"rpc.body.decode_raw": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "true"}},
+									},
 								},
 							},
 						},
@@ -161,6 +167,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 									"rpc.request.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
 									},
+									"rpc.body.decode_raw": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "true"}},
+									},
 								},
 							},
 						},
@@ -203,6 +212,9 @@ func Test_protoprocessor_ConsumeTraceData(t *testing.T) {
 									},
 									"rpc.response.body": {
 										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: decodedGrpcProtobuf}},
+									},
+									"rpc.body.decode_raw": {
+										Value: &tracepb.AttributeValue_StringValue{StringValue: &tracepb.TruncatableString{Value: "true"}},
 									},
 								},
 							},
