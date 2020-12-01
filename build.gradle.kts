@@ -15,7 +15,7 @@ var artifactPath = project.properties.getOrDefault("artifactPath", "$buildDir").
 val protobufVersion = "3.11.4"
 val apiInspectionApiVersion = "0.2.9"
 val apiInspectionApiProto: Configuration by configurations.creating
-val modsecurityCbindingsVersion = "0.1.42"
+val modsecurityCbindingsVersion = "0.1.46"
 val modsecurityCbindingFiles: Configuration by configurations.creating
 val modsecurityConfigFiles: Configuration by configurations.creating
 dependencies {
