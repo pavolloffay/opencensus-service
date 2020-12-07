@@ -404,7 +404,7 @@ func zipkinSpanToTraceSpan(zs *zipkinmodel.SpanModel) (*tracepb.Span, *commonpb.
 			pbs.Attributes = &tracepb.Span_Attributes{AttributeMap: map[string]*tracepb.AttributeValue{}}
 		}
 		for k, v := range kindAttr.GetAttributeMap() {
-			pbs.GetAttributes().GetAttributeMap()[k] = v
+			pbs.Attributes.AttributeMap[k] = v
 		}
 	}
 
