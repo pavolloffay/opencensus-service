@@ -136,6 +136,15 @@ func TestConvertSpansToTraceSpans_protobuf(t *testing.T) {
 					Name:         &tracepb.TruncatableString{Value: "ProtoSpan1"},
 					StartTime:    internal.TimeToTimestamp(now),
 					EndTime:      internal.TimeToTimestamp(now.Add(12 * time.Second)),
+					Attributes: &tracepb.Span_Attributes{
+						AttributeMap: map[string]*tracepb.AttributeValue{
+							"span.kind": {
+								Value: &tracepb.AttributeValue_StringValue{
+									StringValue: &tracepb.TruncatableString{Value: "consumer"},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -161,6 +170,15 @@ func TestConvertSpansToTraceSpans_protobuf(t *testing.T) {
 					Name:         &tracepb.TruncatableString{Value: "CacheWarmUp"},
 					StartTime:    internal.TimeToTimestamp(now.Add(-10 * time.Hour)),
 					EndTime:      internal.TimeToTimestamp(now.Add(-10 * time.Hour).Add(7 * time.Second)),
+					Attributes: &tracepb.Span_Attributes{
+						AttributeMap: map[string]*tracepb.AttributeValue{
+							"span.kind": {
+								Value: &tracepb.AttributeValue_StringValue{
+									StringValue: &tracepb.TruncatableString{Value: "producer"},
+								},
+							},
+						},
+					},
 					TimeEvents: &tracepb.Span_TimeEvents{
 						TimeEvent: []*tracepb.Span_TimeEvent{
 							{
